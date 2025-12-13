@@ -14,8 +14,8 @@ permissions:
 
 env:
   TF_IN_AUTOMATION: "true"
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+  AWS_REGION: "ap-southeast-1"
+  AWS_ROLE_ARN: "arn:aws:iam::516646497975:role/github-actions-infrastructure-action-tracker"
   IMAGE_REPO: "thayu10/infrastructure-action-tracker"
 
 jobs:
