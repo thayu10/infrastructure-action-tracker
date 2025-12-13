@@ -1,0 +1,77 @@
+name: Manual - Terraform Backend Destroy (S3 + DynamoDB)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type DESTROY_BACKEND to confirm backend deletion
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+  TF_STATE_BUCKET: "infrastructure-action-tracker-tf-state"
+  TF_STATE_KEY: "infra/dev/terraform.tfstate"
+  TF_LOCK_TABLE: "terraform-locks"
+
+jobs:
+  backend_destroy:
+    name: Destroy backend (only if infra already destroyed)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Guardrail confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "DESTROY_BACKEND" ]; then
+            echo "Confirmation failed. You must type DESTROY_BACKEND."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Fetch current Terraform state from S3
+        run: |
+          set -e
+          aws s3api head-object --bucket "${TF_STATE_BUCKET}" --key "${TF_STATE_KEY}" >/dev/null
+          aws s3 cp "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}" state.json
+          echo "Downloaded state.json"
+
+      - name: Verify state has zero resources (destroy must have run)
+        run: |
+          python - <<'PY'
+          import json, sys
+          with open("state.json","r",encoding="utf-8") as f:
+            s=json.load(f)
+
+          resources = s.get("resources", [])
+          if resources:
+            print("Refusing to delete backend: terraform state still contains resources.")
+            print(f"Resources count: {len(resources)}")
+            sys.exit(1)
+
+          print("State has zero resources. Backend deletion allowed.")
+          PY
+
+      - name: Empty state bucket
+        run: |
+          set -e
+          aws s3 rm "s3://${TF_STATE_BUCKET}" --recursive || true
+
+      - name: Delete state bucket
+        run: |
+          set -e
+          aws s3api delete-bucket --bucket "${TF_STATE_BUCKET}" --region "${AWS_REGION}"
+
+      - name: Delete DynamoDB lock table
+        run: |
+          set -e
+          aws dynamodb delete-table --table-name "${TF_LOCK_TABLE}"

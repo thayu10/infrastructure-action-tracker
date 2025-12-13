@@ -1,0 +1,58 @@
+name: Manual - Terraform Destroy (dev)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type DESTROY to confirm infrastructure destroy
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_IN_AUTOMATION: "true"
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+  IMAGE_REPO: "thayu10/infrastructure-action-tracker"
+
+jobs:
+  destroy_dev:
+    name: Terraform destroy (dev)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Guardrail confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "DESTROY" ]; then
+            echo "Confirmation failed. You must type DESTROY."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.6"
+
+      - name: Terraform init
+        working-directory: infra
+        run: terraform init -reconfigure
+
+      - name: Terraform destroy (dev)
+        working-directory: infra
+        run: |
+          # docker_image is required by variables.tf even though destroy doesn't care about the value
+          terraform destroy -auto-approve \
+            -var-file="env/dev.tfvars" \
+            -var="docker_image=${IMAGE_REPO}:destroy-placeholder"
