@@ -6,350 +6,361 @@
   <title>Infrastructure Action Tracker</title>
   <style>
     :root{
-      --bg: #071427;
-      --panel: #0b2342;
-      --panel2:#0a1c34;
-      --text: #dbeafe;
-      --muted:#93c5fd;
-      --line: rgba(147,197,253,.18);
-      --accent:#60a5fa;
-      --accent2:#38bdf8;
-      --danger:#fb7185;
-      --ok:#34d399;
-      --warn:#fbbf24;
-      --chip:#0b2b55;
-      --shadow: 0 12px 30px rgba(0,0,0,.35);
-      --radius: 14px;
+      --bg:#08162a;
+      --bg2:#0b1f3a;
+      --card:#0a2342;
+      --card2:#0a2a52;
+      --line:#1c3f66;
+      --text:#e9f2ff;
+      --muted:#a9c3e6;
+      --accent:#2ea8ff;
+      --good:#28d17c;
+      --warn:#ffd166;
+      --bad:#ff5c7a;
+      --chip:#0c2a50;
+      --shadow: 0 16px 40px rgba(0,0,0,.35);
+      --radius: 16px;
+      --radius2: 20px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
     }
     *{ box-sizing:border-box; }
     body{
       margin:0;
-      font-family: var(--sans);
-      background: radial-gradient(1200px 800px at 20% -10%, rgba(96,165,250,.25), transparent 55%),
-                  radial-gradient(1000px 700px at 100% 0%, rgba(56,189,248,.18), transparent 50%),
-                  var(--bg);
-      color: var(--text);
+      font-family:var(--sans);
+      background: radial-gradient(1000px 600px at 20% 0%, rgba(46,168,255,.18), transparent 60%),
+                  radial-gradient(900px 700px at 90% 10%, rgba(40,209,124,.10), transparent 55%),
+                  linear-gradient(180deg, var(--bg), #050e1b 120%);
+      color:var(--text);
+      min-height:100vh;
     }
-    header{
-      position:sticky; top:0;
-      background: rgba(7,20,39,.75);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--line);
-      z-index: 5;
-    }
-    .wrap{ max-width: 1200px; margin:0 auto; padding: 16px 18px; }
-    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    h1{ margin:0; font-size: 18px; letter-spacing:.2px; }
-    .badge{
-      font-family: var(--mono);
-      font-size:12px;
-      padding:6px 10px;
-      border:1px solid var(--line);
-      background: rgba(11,35,66,.65);
-      border-radius: 999px;
-      color: var(--muted);
-    }
-    .panel{
-      background: linear-gradient(180deg, rgba(11,35,66,.85), rgba(10,28,52,.85));
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
+    .wrap{ max-width:1100px; margin:0 auto; padding:18px 16px 34px; }
+    .topbar{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:12px; padding:14px 14px;
+      background: linear-gradient(180deg, rgba(12,42,80,.65), rgba(8,22,42,.65));
+      border:1px solid rgba(28,63,102,.65);
+      border-radius: var(--radius2);
       box-shadow: var(--shadow);
+      position: sticky; top: 10px; z-index: 5;
+      backdrop-filter: blur(10px);
     }
-    .controls{
+    .title{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    h1{ margin:0; font-size:20px; letter-spacing:.2px; }
+    .subtitle{
+      margin:0;
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.35;
+      max-width:680px;
+    }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+    .chip{
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(12,42,80,.7);
+      border:1px solid rgba(28,63,102,.7);
+      color: var(--muted);
+      font-size:12px;
+      font-family: var(--mono);
+    }
+    .actions{ display:flex; gap:10px; align-items:center; }
+    .btn{
+      background: rgba(10,42,82,.75);
+      border:1px solid rgba(28,63,102,.85);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      transition: transform .05s ease, background .15s ease;
+      font-weight:600;
+      font-size:13px;
+    }
+    .btn:hover{ background: rgba(10,42,82,.95); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      border-color: rgba(46,168,255,.85);
+      background: rgba(46,168,255,.12);
+    }
+    .grid{
+      margin-top:14px;
       display:grid;
-      grid-template-columns: 1.2fr repeat(4, minmax(120px, .8fr)) auto;
+      grid-template-columns: 1fr;
+      gap:12px;
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(10,35,66,.75), rgba(8,22,42,.85));
+      border:1px solid rgba(28,63,102,.70);
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow);
+      padding:14px;
+    }
+    .filters{
+      display:grid;
+      grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr auto;
       gap:10px;
-      align-items:center;
+      align-items:end;
+    }
+    @media (max-width: 980px){
+      .filters{ grid-template-columns: 1fr 1fr; }
+    }
+    label{
+      display:block; font-size:12px; color: var(--muted); margin-bottom:6px;
     }
     input, select, textarea{
       width:100%;
+      color:var(--text);
+      background: rgba(6,18,35,.55);
+      border:1px solid rgba(28,63,102,.65);
+      border-radius: 12px;
       padding:10px 10px;
-      border-radius: 12px;
-      border: 1px solid var(--line);
-      background: rgba(7,20,39,.55);
-      color: var(--text);
       outline:none;
+      font-size:13px;
     }
-    textarea{ min-height: 120px; resize: vertical; }
-    input::placeholder{ color: rgba(147,197,253,.6); }
-    button{
-      border: 1px solid rgba(96,165,250,.35);
-      background: linear-gradient(180deg, rgba(96,165,250,.22), rgba(96,165,250,.08));
-      color: var(--text);
-      padding:10px 12px;
-      border-radius: 12px;
-      cursor:pointer;
-      transition: transform .04s ease;
-      font-weight: 600;
+    textarea{ min-height:92px; resize:vertical; }
+    .hint{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
     }
-    button:hover{ transform: translateY(-1px); }
-    button.secondary{
-      border: 1px solid var(--line);
-      background: rgba(7,20,39,.35);
-      font-weight: 600;
-    }
-    button.danger{
-      border: 1px solid rgba(251,113,133,.45);
-      background: rgba(251,113,133,.12);
-    }
-    button.ok{
-      border: 1px solid rgba(52,211,153,.45);
-      background: rgba(52,211,153,.12);
-    }
-    main{ padding: 18px; }
-    table{
-      width:100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      overflow:hidden;
-      border-radius: var(--radius);
-      border: 1px solid var(--line);
-    }
+    table{ width:100%; border-collapse: collapse; overflow:hidden; border-radius: 14px; }
     th, td{
-      padding: 12px 10px;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid rgba(28,63,102,.55);
+      padding: 10px 10px;
+      text-align:left;
+      font-size:13px;
       vertical-align: top;
-      font-size: 13px;
     }
     th{
-      text-align:left;
       color: var(--muted);
-      background: rgba(7,20,39,.45);
-      font-family: var(--mono);
-      font-size: 12px;
-      letter-spacing: .2px;
+      font-weight:700;
+      font-size:12px;
+      letter-spacing:.2px;
     }
-    tr:last-child td{ border-bottom:none; }
-    .chip{
+    tr:hover td{ background: rgba(10,42,82,.18); }
+    .pill{
       display:inline-block;
-      padding:5px 9px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(11,43,85,.55);
-      color: var(--text);
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(28,63,102,.7);
+      background: rgba(12,42,80,.55);
+      font-size:12px;
       font-family: var(--mono);
-      font-size: 12px;
-      white-space: nowrap;
+      color: var(--muted);
     }
-    .chip.p1{ border-color: rgba(251,113,133,.45); }
-    .chip.p2{ border-color: rgba(251,191,36,.45); }
-    .chip.p3{ border-color: rgba(52,211,153,.45); }
+    .pill.p1{ border-color: rgba(255,92,122,.65); color: #ffdbe3; background: rgba(255,92,122,.10); }
+    .pill.p2{ border-color: rgba(255,209,102,.55); color: #fff0c9; background: rgba(255,209,102,.10); }
+    .pill.p3{ border-color: rgba(46,168,255,.55); color: #d7efff; background: rgba(46,168,255,.10); }
+    .pill.open{ border-color: rgba(46,168,255,.55); color:#d7efff; }
+    .pill.blocked{ border-color: rgba(255,209,102,.55); color:#fff0c9; }
+    .pill.resolved{ border-color: rgba(40,209,124,.55); color:#d9ffe9; }
+    .pill.closed{ border-color: rgba(169,195,230,.45); color: var(--muted); }
+    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
     .link{
-      color: var(--accent2);
-      text-decoration:none;
-      cursor:pointer;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight:600;
     }
-    .muted{ color: rgba(147,197,253,.75); }
-    .two{
-      display:grid;
-      grid-template-columns: 1.2fr .8fr;
-      gap: 14px;
-    }
-    .modal{
-      position: fixed;
-      inset: 0;
+    .link:hover{ text-decoration: underline; }
+
+    /* Modal */
+    .modal-backdrop{
+      position:fixed; inset:0;
       background: rgba(0,0,0,.55);
       display:none;
       align-items:center;
       justify-content:center;
       padding:18px;
-      z-index: 50;
+      z-index:10;
     }
-    .modal.open{ display:flex; }
-    .modal-card{
-      width: min(980px, 100%);
-      max-height: 92vh;
+    .modal{
+      width:min(900px, 100%);
+      max-height: calc(100vh - 40px);
       overflow:auto;
-      padding: 16px;
+      background: linear-gradient(180deg, rgba(10,35,66,.95), rgba(8,22,42,.95));
+      border:1px solid rgba(28,63,102,.75);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding:14px;
     }
-    .modal-title{
+    .modal-head{
       display:flex;
-      justify-content: space-between;
       align-items:center;
-      gap: 12px;
-      margin-bottom: 10px;
+      justify-content:space-between;
+      gap:12px;
+      position: sticky;
+      top: 0;
+      background: linear-gradient(180deg, rgba(10,35,66,.95), rgba(10,35,66,.55));
+      padding: 6px 2px 10px;
+      backdrop-filter: blur(10px);
+      z-index: 2;
     }
-    .modal-title h2{ margin:0; font-size: 16px; }
-    .grid{
+    .modal-title{ margin:0; font-size:16px; }
+    .modal-grid{
       display:grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap:10px;
+      margin-top:10px;
     }
-    .grid3{
-      display:grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
+    @media (max-width: 860px){
+      .modal-grid{ grid-template-columns: 1fr; }
     }
-    .hr{
-      height:1px;
-      background: var(--line);
+    .modal-full{ grid-column: 1 / -1; }
+    .sep{
+      height:1px; background: rgba(28,63,102,.55);
       margin: 12px 0;
     }
-    .mini{
-      font-size: 12px;
-      color: rgba(147,197,253,.8);
-      font-family: var(--mono);
+    .footer{
+      display:flex; justify-content:flex-end; gap:10px; margin-top: 10px;
     }
     .toast{
       position: fixed;
       bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(11,35,66,.92);
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 10px 14px;
+      right: 16px;
+      max-width: 360px;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(28,63,102,.7);
+      background: rgba(10,35,66,.92);
       box-shadow: var(--shadow);
       display:none;
-      z-index: 80;
+      z-index: 20;
+      color: var(--text);
       font-size: 13px;
+      line-height: 1.35;
     }
-    .toast.show{ display:block; }
-    @media (max-width: 980px){
-      .controls{ grid-template-columns: 1fr 1fr 1fr; }
-      .two{ grid-template-columns: 1fr; }
-      .grid, .grid3{ grid-template-columns: 1fr; }
-    }
+    .toast small{ color: var(--muted); display:block; margin-top:6px; font-family: var(--mono); font-size:12px; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap row" style="justify-content:space-between;">
-      <div class="row">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
         <h1>Infrastructure Action Tracker</h1>
-        <span class="badge" id="whoami">X-User: (not set)</span>
-        <span class="badge" id="rolebadge">X-Role: member</span>
+        <p class="subtitle">
+          A lightweight operational tracker for infrastructure actions — capture context, ownership, lifecycle state,
+          and attach evidence (S3) with an auditable record stored in Postgres (RDS).
+        </p>
+        <div class="chips">
+          <span class="chip" id="chip-user">X-User: (unset)</span>
+          <span class="chip" id="chip-role">X-Role: member</span>
+        </div>
       </div>
-      <div class="row">
-        <button id="newBtn">New Action</button>
-        <button class="secondary" id="refreshBtn">Refresh</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="wrap">
-    <div class="panel" style="padding:14px; margin-bottom:14px;">
-      <div class="controls">
-        <input id="q" placeholder="Search title/description…" />
-        <select id="fStatus"></select>
-        <select id="fPriority"></select>
-        <select id="fOwner"></select>
-        <select id="fComponent"></select>
-        <button class="secondary" id="clearBtn">Clear</button>
-      </div>
-      <div class="mini" style="margin-top:10px;">
-        Tip: for write actions in ECS/ALB, supply headers <span class="chip">X-User</span> and optional <span class="chip">X-Role</span>.
+      <div class="actions">
+        <button class="btn primary" id="btn-new">New Action</button>
+        <button class="btn" id="btn-refresh">Refresh</button>
       </div>
     </div>
 
-    <div class="panel" style="padding:0;">
-      <table>
-        <thead>
-          <tr>
-            <th>Priority</th>
-            <th>Status</th>
-            <th>Title</th>
-            <th>Owner</th>
-            <th>Component</th>
-            <th>Updated</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="6" class="muted">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </main>
+    <div class="grid">
+      <div class="card">
+        <div class="filters">
+          <div>
+            <label>Search title/description</label>
+            <input id="q" placeholder="Search..." />
+          </div>
+          <div>
+            <label>Status</label>
+            <select id="f-status"></select>
+          </div>
+          <div>
+            <label>Priority</label>
+            <select id="f-priority"></select>
+          </div>
+          <div>
+            <label>Owner</label>
+            <select id="f-owner"></select>
+          </div>
+          <div>
+            <label>Component</label>
+            <select id="f-component"></select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="btn" id="btn-clear">Clear</button>
+          </div>
+        </div>
 
-  <!-- New/Edit Modal -->
-  <div class="modal" id="modal">
-    <div class="panel modal-card">
-      <div class="modal-title">
-        <h2 id="modalHeading">New Action</h2>
-        <div class="row">
-          <button class="secondary" id="closeModal">Close</button>
+        <div class="hint">
+          Tip: write actions in ECS/ALB, supply headers <span class="chip">X-User</span> and optional <span class="chip">X-Role</span>.
         </div>
       </div>
 
-      <div class="grid">
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px;">Priority</th>
+              <th style="width:140px;">Status</th>
+              <th>Title</th>
+              <th style="width:140px;">Owner</th>
+              <th style="width:180px;">Component</th>
+              <th style="width:170px;">Updated</th>
+              <th style="width:190px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="7" style="color:var(--muted);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 class="modal-title">New Action</h2>
+        <button class="btn" id="btn-close">Close</button>
+      </div>
+
+      <div class="modal-grid">
+        <div class="modal-full">
+          <label>Title (imperative + specific)</label>
+          <input id="m-title" placeholder="Restart the stuck ECS service in prod-us-east-1" />
+        </div>
+
         <div>
-          <label class="mini">Title (imperative + specific)</label>
-          <input id="mTitle" placeholder="Restart the stuck ECS service in prod-us-east-1" />
+          <label>Priority</label>
+          <select id="m-priority"></select>
         </div>
-        <div class="grid3">
-          <div>
-            <label class="mini">Priority</label>
-            <select id="mPriority"></select>
-          </div>
-          <div>
-            <label class="mini">Owner</label>
-            <select id="mOwner"></select>
-          </div>
-          <div>
-            <label class="mini">Component</label>
-            <select id="mComponent"></select>
-          </div>
-        </div>
-      </div>
 
-      <div style="margin-top:10px;">
-        <label class="mini">Description (markdown-style text supported)</label>
-        <textarea id="mDesc" placeholder="- What happened
+        <div>
+          <label>Owner</label>
+          <select id="m-owner"></select>
+        </div>
+
+        <div class="modal-full">
+          <label>Component</label>
+          <select id="m-component"></select>
+        </div>
+
+        <div class="modal-full">
+          <label>Description (markdown-style text supported)</label>
+          <textarea id="m-description">- What happened
 - Link to dashboard/logs
-- Error snippet"></textarea>
+- Error snippet</textarea>
+        </div>
+
+        <div class="modal-full">
+          <div class="sep"></div>
+          <label>Lifecycle</label>
+          <select id="m-status"></select>
+          <div style="margin-top:10px;">
+            <button class="btn" id="btn-apply-status">Apply Status</button>
+          </div>
+          <div style="margin-top:12px;">
+            <label>Resolution Notes (required for Resolved)</label>
+            <textarea id="m-resolution" placeholder="What fixed it? What changed?"></textarea>
+          </div>
+        </div>
       </div>
 
-      <div class="hr"></div>
-
-      <div class="two">
-        <div>
-          <div class="row" style="justify-content:space-between;">
-            <div class="mini">Lifecycle</div>
-            <span class="muted mini" id="mActionId"></span>
-          </div>
-          <div class="row" style="margin-top:8px;">
-            <select id="mStatus"></select>
-            <button class="secondary" id="applyStatusBtn">Apply Status</button>
-          </div>
-          <div style="margin-top:8px;">
-            <label class="mini">Resolution Notes (required for Resolved)</label>
-            <textarea id="mResolution" placeholder="What fixed it? What changed?"></textarea>
-          </div>
-
-          <div class="row" style="margin-top:10px;">
-            <button id="saveBtn" class="ok">Save</button>
-            <button id="updateBtn" class="ok" style="display:none;">Update</button>
-          </div>
-
-          <div class="mini" style="margin-top:8px;">
-            Close requires <span class="chip">X-Role: lead</span> or <span class="chip">admin</span>.
-          </div>
-        </div>
-
-        <div>
-          <div class="row" style="justify-content:space-between;">
-            <div class="mini">Evidence</div>
-          </div>
-          <div class="row" style="margin-top:8px;">
-            <input type="file" id="fileInput" />
-            <button class="secondary" id="uploadBtn">Upload</button>
-          </div>
-          <div class="mini" style="margin-top:8px;">
-            Upload uses a presigned S3 URL. Files never go through the app server.
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="mini">Evidence list</div>
-          <div id="evidenceList" class="muted" style="margin-top:8px;">No evidence yet.</div>
-
-          <div class="hr"></div>
-
-          <div class="mini">Audit trail</div>
-          <div id="auditList" class="muted" style="margin-top:8px;">No events yet.</div>
-        </div>
+      <div class="footer">
+        <button class="btn primary" id="btn-save">Save</button>
       </div>
     </div>
   </div>
@@ -357,375 +368,325 @@
   <div class="toast" id="toast"></div>
 
 <script>
-  // ---- Client-side “identity” (for local/demo). In ECS behind ALB, you can inject via ALB rules, a proxy, or test tools.
-  // In browser, we can’t set custom headers on normal navigation, but we can set them on fetch() calls.
-  // For demo: store identity in localStorage.
-  const identity = {
-    user: localStorage.getItem("x_user") || "",
-    role: localStorage.getItem("x_role") || "member"
+  // -----------------------------
+  // Configurable dropdown sources
+  // -----------------------------
+  // Keep these simple and recruiter-friendly: you can change the lists without touching backend.
+  const CONFIG = {
+    owners: ["thayu10", "devops", "platform", "oncall"],
+    components: ["ECS-Service", "ALB", "RDS-Postgres", "CI/CD", "IAM", "S3", "VPC", "CloudWatch"],
+    priorities: ["P1", "P2", "P3"],
+    statuses: ["Open", "In Progress", "Blocked", "Resolved", "Closed"]
   };
 
-  function setBadges(){
-    document.getElementById("whoami").textContent = "X-User: " + (identity.user || "(not set)");
-    document.getElementById("rolebadge").textContent = "X-Role: " + (identity.role || "member");
+  // -----------------------------
+  // Identity headers
+  // -----------------------------
+  let X_USER = localStorage.getItem("iat_x_user") || "thayu10";
+  let X_ROLE = localStorage.getItem("iat_x_role") || "admin";
+
+  function setIdentity(user, role){
+    X_USER = (user || "").trim();
+    X_ROLE = (role || "member").trim().toLowerCase();
+    localStorage.setItem("iat_x_user", X_USER);
+    localStorage.setItem("iat_x_role", X_ROLE);
+    document.getElementById("chip-user").textContent = `X-User: ${X_USER || "(unset)"}`;
+    document.getElementById("chip-role").textContent = `X-Role: ${X_ROLE || "member"}`;
   }
 
-  function toast(msg){
-    const t = document.getElementById("toast");
-    t.textContent = msg;
-    t.classList.add("show");
-    setTimeout(()=>t.classList.remove("show"), 2400);
+  setIdentity(X_USER, X_ROLE);
+
+  // -----------------------------
+  // Helpers
+  // -----------------------------
+  function toast(msg, meta){
+    const el = document.getElementById("toast");
+    el.innerHTML = `${escapeHtml(msg)}${meta ? `<small>${escapeHtml(meta)}</small>` : ""}`;
+    el.style.display = "block";
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => el.style.display = "none", 3600);
   }
 
-  async function api(path, opts={}){
-    const headers = Object.assign({}, opts.headers || {});
-    if(identity.user) headers["X-User"] = identity.user;
-    if(identity.role) headers["X-Role"] = identity.role;
-    headers["Content-Type"] = headers["Content-Type"] || "application/json";
-    const res = await fetch(path, Object.assign({}, opts, { headers }));
-    const data = await res.json().catch(()=> ({}));
-    if(!res.ok){
-      throw new Error(data.error || ("HTTP " + res.status));
+  function escapeHtml(s){
+    return (s || "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function fmtDate(iso){
+    try{
+      const d = new Date(iso);
+      return d.toLocaleString();
+    }catch(e){
+      return iso || "";
+    }
+  }
+
+  function pill(cls, text){
+    return `<span class="pill ${cls}">${escapeHtml(text)}</span>`;
+  }
+
+  function priClass(p){
+    return (p || "").toLowerCase();
+  }
+  function statusClass(s){
+    const t = (s || "").toLowerCase();
+    if (t.includes("open")) return "open";
+    if (t.includes("blocked")) return "blocked";
+    if (t.includes("resolved")) return "resolved";
+    if (t.includes("closed")) return "closed";
+    return "";
+  }
+
+  async function api(path, options = {}){
+    const headers = {
+      "Content-Type": "application/json",
+      "X-User": X_USER,
+      "X-Role": X_ROLE,
+      ...(options.headers || {})
+    };
+    const res = await fetch(path, { ...options, headers });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch(e) {}
+    if (!res.ok){
+      const detail = data ? JSON.stringify(data) : text;
+      throw new Error(`${res.status} ${res.statusText} :: ${detail}`);
     }
     return data;
   }
 
-  // ---- State
-  let config = null;
-  let actions = [];
-  let selectedId = null;
-
-  // ---- Elements
-  const tbody = document.getElementById("tbody");
-  const modal = document.getElementById("modal");
-
-  const fStatus = document.getElementById("fStatus");
-  const fPriority = document.getElementById("fPriority");
-  const fOwner = document.getElementById("fOwner");
-  const fComponent = document.getElementById("fComponent");
-  const q = document.getElementById("q");
-
-  const mTitle = document.getElementById("mTitle");
-  const mDesc = document.getElementById("mDesc");
-  const mOwner = document.getElementById("mOwner");
-  const mComponent = document.getElementById("mComponent");
-  const mPriority = document.getElementById("mPriority");
-  const mStatus = document.getElementById("mStatus");
-  const mResolution = document.getElementById("mResolution");
-  const mActionId = document.getElementById("mActionId");
-  const evidenceList = document.getElementById("evidenceList");
-  const auditList = document.getElementById("auditList");
-
-  const saveBtn = document.getElementById("saveBtn");
-  const updateBtn = document.getElementById("updateBtn");
-
-  function option(el, val, text){
-    const o = document.createElement("option");
-    o.value = val;
-    o.textContent = text ?? val;
-    el.appendChild(o);
+  function fillSelect(selectEl, options, { includeAny = false, anyLabel = "Any", anyValue = "" } = {}){
+    selectEl.innerHTML = "";
+    if (includeAny){
+      const opt = document.createElement("option");
+      opt.value = anyValue;
+      opt.textContent = anyLabel;
+      selectEl.appendChild(opt);
+    }
+    for (const v of options){
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      selectEl.appendChild(opt);
+    }
   }
 
-  function resetModalForNew(){
-    selectedId = null;
-    document.getElementById("modalHeading").textContent = "New Action";
-    saveBtn.style.display = "inline-block";
-    updateBtn.style.display = "none";
+  // -----------------------------
+  // Populate dropdowns (fixes your issue)
+  // -----------------------------
+  const fStatus = document.getElementById("f-status");
+  const fPriority = document.getElementById("f-priority");
+  const fOwner = document.getElementById("f-owner");
+  const fComponent = document.getElementById("f-component");
 
-    mActionId.textContent = "";
-    mTitle.value = "";
-    mDesc.value = "";
-    mResolution.value = "";
-    mStatus.value = "Open";
-    evidenceList.textContent = "Create the action first to attach evidence.";
-    auditList.textContent = "No events yet.";
-  }
+  const mPriority = document.getElementById("m-priority");
+  const mOwner = document.getElementById("m-owner");
+  const mComponent = document.getElementById("m-component");
+  const mStatus = document.getElementById("m-status");
 
+  fillSelect(fStatus, CONFIG.statuses, { includeAny:true, anyLabel:"Any status" });
+  fillSelect(fPriority, CONFIG.priorities, { includeAny:true, anyLabel:"Any priority" });
+  fillSelect(fOwner, CONFIG.owners, { includeAny:true, anyLabel:"Any owner" });
+  fillSelect(fComponent, CONFIG.components, { includeAny:true, anyLabel:"Any component" });
+
+  fillSelect(mPriority, CONFIG.priorities);
+  fillSelect(mOwner, CONFIG.owners);
+  fillSelect(mComponent, CONFIG.components);
+  fillSelect(mStatus, CONFIG.statuses);
+
+  // Defaults for modal
+  mPriority.value = "P2";
+  mOwner.value = CONFIG.owners[0] || "";
+  mComponent.value = CONFIG.components[0] || "";
+  mStatus.value = "Open";
+
+  // -----------------------------
+  // Modal controls
+  // -----------------------------
+  const backdrop = document.getElementById("modal-backdrop");
   function openModal(){
-    modal.classList.add("open");
+    backdrop.style.display = "flex";
   }
   function closeModal(){
-    modal.classList.remove("open");
+    backdrop.style.display = "none";
   }
+  document.getElementById("btn-new").addEventListener("click", openModal);
+  document.getElementById("btn-close").addEventListener("click", closeModal);
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closeModal();
+  });
 
-  function chipPriority(p){
-    const cls = p === "P1" ? "p1" : (p === "P2" ? "p2" : "p3");
-    return `<span class="chip ${cls}">${p}</span>`;
-  }
-  function chip(s){ return `<span class="chip">${s}</span>`; }
+  // -----------------------------
+  // Data + rendering
+  // -----------------------------
+  let cache = [];
 
-  function renderTable(){
-    if(!actions.length){
-      tbody.innerHTML = `<tr><td colspan="6" class="muted">No actions found.</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = actions.map(a => `
-      <tr>
-        <td>${chipPriority(a.priority)}</td>
-        <td>${chip(a.status)}</td>
-        <td><a class="link" data-id="${a.id}">${escapeHtml(a.title)}</a><div class="muted" style="margin-top:6px; font-size:12px;">Created by <span class="chip">${escapeHtml(a.created_by)}</span> • ${fmt(a.created_at)}</div></td>
-        <td>${chip(escapeHtml(a.owner))}</td>
-        <td>${chip(escapeHtml(a.component))}</td>
-        <td class="muted">${fmt(a.updated_at)}</td>
-      </tr>
-    `).join("");
-    tbody.querySelectorAll("a.link").forEach(a => {
-      a.addEventListener("click", () => openExisting(a.getAttribute("data-id")));
+  function applyFilters(items){
+    const q = (document.getElementById("q").value || "").toLowerCase().trim();
+    const s = fStatus.value;
+    const p = fPriority.value;
+    const o = fOwner.value;
+    const c = fComponent.value;
+
+    return items.filter(it => {
+      if (s && it.status !== s) return false;
+      if (p && it.priority !== p) return false;
+      if (o && it.owner !== o) return false;
+      if (c && it.component !== c) return false;
+      if (q){
+        const hay = `${it.title || ""} ${it.description || ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
     });
   }
 
-  function fmt(isoStr){
-    if(!isoStr) return "";
-    const d = new Date(isoStr);
-    return d.toLocaleString();
-  }
+  function render(){
+    const rows = document.getElementById("rows");
+    const filtered = applyFilters(cache);
 
-  function escapeHtml(s){
-    return (s || "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
-  }
+    if (!filtered.length){
+      rows.innerHTML = `<tr><td colspan="7" style="color:var(--muted);">No actions found.</td></tr>`;
+      return;
+    }
 
-  async function loadConfig(){
-    config = await api("/api/config", { method: "GET", headers: {"Content-Type":"application/json"} });
-    // Filters
-    fStatus.innerHTML = ""; option(fStatus, "", "Status (all)"); config.statuses.forEach(x => option(fStatus, x, x));
-    fPriority.innerHTML = ""; option(fPriority, "", "Priority (all)"); config.priorities.forEach(x => option(fPriority, x, x));
-    fOwner.innerHTML = ""; option(fOwner, "", "Owner (all)"); config.owners.forEach(x => option(fOwner, x, x));
-    fComponent.innerHTML = ""; option(fComponent, "", "Component (all)"); config.components.forEach(x => option(fComponent, x, x));
+    rows.innerHTML = filtered.map(it => `
+      <tr>
+        <td>${pill(priClass(it.priority), it.priority)}</td>
+        <td>${pill(statusClass(it.status), it.status)}</td>
+        <td>
+          <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(it.title)}</div>
+          <div style="color:var(--muted); font-size:12px; white-space:pre-wrap;">${escapeHtml(it.description || "")}</div>
+        </td>
+        <td>${escapeHtml(it.owner)}</td>
+        <td>${escapeHtml(it.component)}</td>
+        <td>${escapeHtml(fmtDate(it.updated_at || it.created_at))}</td>
+        <td>
+          <div class="row-actions">
+            <a class="link" href="#" data-open="${it.id}">Open</a>
+            <a class="link" href="#" data-progress="${it.id}">In Progress</a>
+            <a class="link" href="#" data-block="${it.id}">Blocked</a>
+            <a class="link" href="#" data-resolve="${it.id}">Resolve</a>
+          </div>
+        </td>
+      </tr>
+    `).join("");
 
-    // Modal selects
-    mPriority.innerHTML = ""; config.priorities.forEach(x => option(mPriority, x, x));
-    mOwner.innerHTML = ""; config.owners.forEach(x => option(mOwner, x, x));
-    mComponent.innerHTML = ""; config.components.forEach(x => option(mComponent, x, x));
-    mStatus.innerHTML = ""; config.statuses.forEach(x => option(mStatus, x, x));
-  }
-
-  function buildQuery(){
-    const params = new URLSearchParams();
-    if(q.value.trim()) params.set("q", q.value.trim());
-    if(fStatus.value) params.set("status", fStatus.value);
-    if(fPriority.value) params.set("priority", fPriority.value);
-    if(fOwner.value) params.set("owner", fOwner.value);
-    if(fComponent.value) params.set("component", fComponent.value);
-    const qs = params.toString();
-    return qs ? ("?" + qs) : "";
+    // action links
+    rows.querySelectorAll("a[data-open]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.open, "Open"); }));
+    rows.querySelectorAll("a[data-progress]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.progress, "In Progress"); }));
+    rows.querySelectorAll("a[data-block]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.block, "Blocked"); }));
+    rows.querySelectorAll("a[data-resolve]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); promptResolve(a.dataset.resolve); }));
   }
 
   async function refresh(){
     try{
-      const data = await api("/api/actions" + buildQuery(), { method: "GET", headers: {"Content-Type":"application/json"} });
-      actions = data.items || [];
-      renderTable();
+      const data = await api("/api/actions");
+      cache = (data && data.items) ? data.items : [];
+      render();
     }catch(e){
-      tbody.innerHTML = `<tr><td colspan="6" class="muted">Error: ${escapeHtml(e.message)}</td></tr>`;
+      cache = [];
+      document.getElementById("rows").innerHTML = `<tr><td colspan="7" style="color:var(--bad);">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+      toast("Failed to load actions", e.message);
     }
   }
 
-  async function openExisting(id){
-    selectedId = id;
-    const item = actions.find(x => x.id === id);
-    if(!item) return;
-
-    document.getElementById("modalHeading").textContent = "Action";
-    saveBtn.style.display = "none";
-    updateBtn.style.display = "inline-block";
-
-    mActionId.textContent = id;
-    mTitle.value = item.title;
-    mDesc.value = item.description;
-    mOwner.value = item.owner;
-    mComponent.value = item.component;
-    mPriority.value = item.priority;
-    mStatus.value = item.status;
-    mResolution.value = item.resolution_notes || "";
-
-    await refreshEvidence();
-    await refreshAudit();
-    openModal();
-  }
-
-  async function refreshEvidence(){
-    if(!selectedId){
-      evidenceList.textContent = "Create the action first to attach evidence.";
-      return;
-    }
-    try{
-      const data = await api(`/api/actions/${selectedId}/evidence`, { method: "GET", headers: {"Content-Type":"application/json"} });
-      const items = data.items || [];
-      if(!items.length){
-        evidenceList.textContent = "No evidence yet.";
-        return;
-      }
-      evidenceList.innerHTML = items.map(e => `
-        <div style="padding:8px 0; border-bottom:1px solid rgba(147,197,253,.12);">
-          <div><span class="chip">${escapeHtml(e.filename)}</span> <span class="muted mini">(${escapeHtml(e.content_type)})</span></div>
-          <div class="mini muted" style="margin-top:6px;">Key: <span class="chip">${escapeHtml(e.s3_key)}</span></div>
-          <div class="mini muted" style="margin-top:6px;">By <span class="chip">${escapeHtml(e.uploaded_by)}</span> • ${fmt(e.uploaded_at)}</div>
-        </div>
-      `).join("");
-    }catch(e){
-      evidenceList.textContent = "Error loading evidence: " + e.message;
-    }
-  }
-
-  async function refreshAudit(){
-    if(!selectedId){
-      auditList.textContent = "No events yet.";
-      return;
-    }
-    try{
-      const data = await api(`/api/actions/${selectedId}/audit`, { method: "GET", headers: {"Content-Type":"application/json"} });
-      const items = data.items || [];
-      if(!items.length){
-        auditList.textContent = "No events yet.";
-        return;
-      }
-      auditList.innerHTML = items.map(ev => `
-        <div style="padding:8px 0; border-bottom:1px solid rgba(147,197,253,.12);">
-          <div>
-            <span class="chip">${escapeHtml(ev.event_type)}</span>
-            ${ev.to_status ? `<span class="chip">${escapeHtml(ev.from_status || "")} → ${escapeHtml(ev.to_status)}</span>` : ``}
-          </div>
-          <div class="mini muted" style="margin-top:6px;">By <span class="chip">${escapeHtml(ev.actor)}</span> • ${fmt(ev.created_at)}</div>
-          ${ev.notes ? `<div class="mini muted" style="margin-top:6px;">${escapeHtml(ev.notes)}</div>` : ``}
-        </div>
-      `).join("");
-    }catch(e){
-      auditList.textContent = "Error loading audit: " + e.message;
-    }
-  }
-
+  // -----------------------------
+  // Mutations
+  // -----------------------------
   async function createAction(){
-    try{
-      const payload = {
-        title: mTitle.value.trim(),
-        description: mDesc.value.trim(),
-        owner: mOwner.value,
-        component: mComponent.value,
-        priority: mPriority.value
-      };
-      const data = await api("/api/actions", { method: "POST", body: JSON.stringify(payload) });
-      toast("Created action");
-      await refresh();
-      await openExisting(data.id);
-    }catch(e){
-      toast(e.message);
+    const title = document.getElementById("m-title").value.trim();
+    const description = document.getElementById("m-description").value.trim();
+    const owner = document.getElementById("m-owner").value;
+    const component = document.getElementById("m-component").value;
+    const priority = document.getElementById("m-priority").value;
+
+    if (!title || !description || !owner || !component || !priority){
+      toast("Missing fields", "Title, Description, Owner, Component, Priority are required.");
+      return;
     }
-  }
-
-  async function updateAction(){
-    if(!selectedId) return;
-    try{
-      const payload = {
-        title: mTitle.value.trim(),
-        description: mDesc.value.trim(),
-        owner: mOwner.value,
-        component: mComponent.value,
-        priority: mPriority.value
-      };
-      await api(`/api/actions/${selectedId}`, { method: "PATCH", body: JSON.stringify(payload) });
-      toast("Updated");
-      await refresh();
-    }catch(e){
-      toast(e.message);
-    }
-  }
-
-  async function applyStatus(){
-    if(!selectedId) { toast("Create an action first"); return; }
-    try{
-      const payload = {
-        to_status: mStatus.value,
-        resolution_notes: mResolution.value.trim()
-      };
-      await api(`/api/actions/${selectedId}/status`, { method: "POST", body: JSON.stringify(payload) });
-      toast("Status updated");
-      await refresh();
-      await refreshAudit();
-    }catch(e){
-      toast(e.message);
-    }
-  }
-
-  async function uploadEvidence(){
-    if(!selectedId) { toast("Create an action first"); return; }
-    const file = document.getElementById("fileInput").files[0];
-    if(!file) { toast("Pick a file first"); return; }
 
     try{
-      // 1) presign
-      const pres = await api(`/api/actions/${selectedId}/evidence/presign`, {
+      const res = await api("/api/actions", {
         method: "POST",
-        body: JSON.stringify({ filename: file.name, content_type: file.type || "application/octet-stream" })
+        body: JSON.stringify({ title, description, owner, component, priority })
       });
+      toast("Action created", res && res.id ? `id=${res.id}` : "");
+      closeModal();
+      await refresh();
+    }catch(e){
+      toast("Create failed", e.message);
+    }
+  }
 
-      // 2) PUT directly to S3 (no custom headers beyond Content-Type)
-      const putRes = await fetch(pres.upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file
+  async function quickUpdate(id, status){
+    try{
+      await api(`/api/actions/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status })
       });
-      if(!putRes.ok){
-        throw new Error("S3 upload failed: HTTP " + putRes.status);
+      toast("Updated", `${id} → ${status}`);
+      await refresh();
+    }catch(e){
+      toast("Update failed", e.message);
+    }
+  }
+
+  async function promptResolve(id){
+    const notes = prompt("Resolution notes (required):");
+    if (!notes || !notes.trim()){
+      toast("Resolve cancelled", "Resolution notes are required.");
+      return;
+    }
+    try{
+      await api(`/api/actions/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "Resolved", resolution_notes: notes.trim() })
+      });
+      toast("Resolved", `${id}`);
+      await refresh();
+    }catch(e){
+      toast("Resolve failed", e.message);
+    }
+  }
+
+  // modal status apply (for the "New Action" form)
+  document.getElementById("btn-apply-status").addEventListener("click", () => {
+    const s = mStatus.value;
+    if (s === "Resolved"){
+      const notes = (document.getElementById("m-resolution").value || "").trim();
+      if (!notes){
+        toast("Resolution notes required", "Add notes before setting Resolved.");
+        mStatus.value = "Open";
+        return;
       }
-
-      // 3) confirm (store metadata)
-      await api(`/api/actions/${selectedId}/evidence/confirm`, {
-        method: "POST",
-        body: JSON.stringify({
-          filename: file.name,
-          s3_key: pres.s3_key,
-          content_type: file.type || "application/octet-stream",
-          size_bytes: file.size
-        })
-      });
-
-      toast("Evidence uploaded");
-      document.getElementById("fileInput").value = "";
-      await refreshEvidence();
-      await refreshAudit();
-      await refresh();
-    }catch(e){
-      toast(e.message);
     }
-  }
-
-  // ---- UI events
-  document.getElementById("newBtn").addEventListener("click", () => { resetModalForNew(); openModal(); });
-  document.getElementById("closeModal").addEventListener("click", closeModal);
-  document.getElementById("refreshBtn").addEventListener("click", refresh);
-  document.getElementById("clearBtn").addEventListener("click", () => {
-    q.value = ""; fStatus.value=""; fPriority.value=""; fOwner.value=""; fComponent.value="";
-    refresh();
+    toast("Lifecycle set", `New action will start as ${s} after you Save.`);
   });
 
-  [q, fStatus, fPriority, fOwner, fComponent].forEach(el => el.addEventListener("input", () => refresh()));
+  // Save
+  document.getElementById("btn-save").addEventListener("click", createAction);
 
-  saveBtn.addEventListener("click", createAction);
-  updateBtn.addEventListener("click", updateAction);
-  document.getElementById("applyStatusBtn").addEventListener("click", applyStatus);
-  document.getElementById("uploadBtn").addEventListener("click", uploadEvidence);
+  // Header refresh / clear filters
+  document.getElementById("btn-refresh").addEventListener("click", refresh);
+  document.getElementById("btn-clear").addEventListener("click", () => {
+    document.getElementById("q").value = "";
+    fStatus.value = "";
+    fPriority.value = "";
+    fOwner.value = "";
+    fComponent.value = "";
+    render();
+  });
 
-  // Identity prompt (only if not set)
-  function ensureIdentity(){
-    setBadges();
-    if(!identity.user){
-      const u = prompt("Enter X-User (used for write actions):", "thayu10") || "";
-      const r = (prompt("Enter X-Role (member|lead|admin):", "member") || "member").toLowerCase();
-      identity.user = u.trim();
-      identity.role = (["member","lead","admin"].includes(r) ? r : "member");
-      localStorage.setItem("x_user", identity.user);
-      localStorage.setItem("x_role", identity.role);
-      setBadges();
-      toast("Identity saved for API calls");
-    }
-  }
+  // filter reactive updates
+  ["q","f-status","f-priority","f-owner","f-component"].forEach(id => {
+    document.getElementById(id).addEventListener("input", render);
+    document.getElementById(id).addEventListener("change", render);
+  });
 
-  // Boot
-  (async function(){
-    ensureIdentity();
-    await loadConfig();
-    await refresh();
-  })();
+  // initial load
+  refresh();
 </script>
 </body>
 </html>
