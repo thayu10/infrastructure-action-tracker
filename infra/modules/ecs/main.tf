@@ -64,7 +64,7 @@ resource "aws_ecs_service" "app" {
   launch_type     = "FARGATE"
 
   health_check_grace_period_seconds = 60
-  
+
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [var.ecs_sg_id]
