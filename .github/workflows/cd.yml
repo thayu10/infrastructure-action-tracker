@@ -1,61 +1,68 @@
-name: CI - Build & Push Image
+name: CD - Terraform Apply (dev)
 
 on:
   push:
     branches: [ "main" ]
     paths:
+      - "infra/**"
       - "app/**"
-      - ".github/workflows/ci.yml"
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - "app/**"
-      - ".github/workflows/ci.yml"
+      - ".github/workflows/cd.yml"
+  workflow_dispatch: {}
 
 permissions:
   contents: read
+  id-token: write
+
+env:
+  TF_IN_AUTOMATION: "true"
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+  IMAGE_REPO: "thayu10/infrastructure-action-tracker"
 
 jobs:
-  build_test:
-    name: Build + basic checks
+  apply_dev:
+    name: Terraform apply (dev)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Basic Python syntax check
-        uses: actions/setup-python@v5
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          python-version: "3.12"
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Compile main.py
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.6"
+
+      - name: Terraform fmt check
+        working-directory: infra
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        working-directory: infra
+        run: terraform init -reconfigure
+
+      - name: Terraform validate
+        working-directory: infra
+        run: terraform validate
+
+      - name: Terraform plan (dev)
+        working-directory: infra
         run: |
-          python -m py_compile app/main.py
+          IMAGE_TAG="sha-${GITHUB_SHA}"
+          terraform plan \
+            -var-file="env/dev.tfvars" \
+            -var="docker_image=${IMAGE_REPO}:${IMAGE_TAG}"
 
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: thayu10/infrastructure-action-tracker
-          tags: |
-            type=sha
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Docker login (only on main)
-        if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build (PR) / Build+Push (main)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./app
-          file: ./app/Dockerfile
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Terraform apply (dev)
+        working-directory: infra
+        run: |
+          IMAGE_TAG="sha-${GITHUB_SHA}"
+          terraform apply -auto-approve \
+            -var-file="env/dev.tfvars" \
+            -var="docker_image=${IMAGE_REPO}:${IMAGE_TAG}"

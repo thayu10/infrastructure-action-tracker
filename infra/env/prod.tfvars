@@ -11,10 +11,10 @@ public_subnet_cidrs  = ["10.20.1.0/24", "10.20.2.0/24"]
 private_subnet_cidrs = ["10.20.11.0/24", "10.20.12.0/24"]
 
 # RDS sizing (keep small unless you explicitly want bigger)
-db_instance_class     = "db.t4g.micro"
-db_allocated_storage  = 20
-db_name               = "actiontracker"
-db_username           = "actiontracker"
+db_instance_class    = "db.t4g.micro"
+db_allocated_storage = 20
+db_name              = "actiontracker"
+db_username          = "actiontracker"
 
 # UI dropdowns
 owners     = ["thayu10"]

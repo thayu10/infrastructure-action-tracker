@@ -21,7 +21,7 @@ resource "aws_iam_role" "ecs_execution" {
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_managed" {
   role       = aws_iam_role.ecs_execution.name
-  policy_arn  = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 ########################################
@@ -38,8 +38,8 @@ resource "aws_iam_role" "ecs_task" {
 # - read DB password from SSM parameter (SecureString)
 data "aws_iam_policy_document" "ecs_task_inline" {
   statement {
-    sid     = "EvidenceBucketAccess"
-    effect  = "Allow"
+    sid    = "EvidenceBucketAccess"
+    effect = "Allow"
     actions = [
       "s3:ListBucket"
     ]
@@ -49,8 +49,8 @@ data "aws_iam_policy_document" "ecs_task_inline" {
   }
 
   statement {
-    sid     = "EvidenceObjectAccess"
-    effect  = "Allow"
+    sid    = "EvidenceObjectAccess"
+    effect = "Allow"
     actions = [
       "s3:PutObject",
       "s3:GetObject",
@@ -64,8 +64,8 @@ data "aws_iam_policy_document" "ecs_task_inline" {
   }
 
   statement {
-    sid     = "ReadDbPasswordFromSSM"
-    effect  = "Allow"
+    sid    = "ReadDbPasswordFromSSM"
+    effect = "Allow"
     actions = [
       "ssm:GetParameter",
       "ssm:GetParameters"
@@ -82,6 +82,6 @@ resource "aws_iam_policy" "ecs_task_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_attach" {
-  role      = aws_iam_role.ecs_task.name
+  role       = aws_iam_role.ecs_task.name
   policy_arn = aws_iam_policy.ecs_task_policy.arn
 }
