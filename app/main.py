@@ -1,559 +1,477 @@
 import os
 import re
 import json
-import uuid
 import time
-from datetime import datetime, timezone
+import uuid
+import base64
+import datetime as dt
+from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Flask, request, jsonify, send_from_directory
+import boto3
 import psycopg2
 import psycopg2.extras
-import boto3
+from flask import (
+    Flask,
+    jsonify,
+    request,
+    render_template_string,
+)
 
 APP_PORT = int(os.getenv("APP_PORT", "8000"))
 
+# Auth-lite identity headers
+HDR_USER = "X-User"
+HDR_ROLE = "X-Role"
+ALLOWED_ROLES = {"member", "lead", "admin"}
+
+# Core fields
+STATUSES = ["Open", "In Progress", "Blocked", "Resolved", "Closed"]
+PRIORITIES = ["P1", "P2", "P3"]
+
+# S3 evidence config
+EVIDENCE_BUCKET = os.getenv("EVIDENCE_BUCKET", "")
+EVIDENCE_PREFIX = os.getenv("EVIDENCE_PREFIX", "evidence")
+
+# DB config
 DB_HOST = os.getenv("DB_HOST", "")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
 DB_NAME = os.getenv("DB_NAME", "")
 DB_USER = os.getenv("DB_USER", "")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
-EVIDENCE_BUCKET = os.getenv("EVIDENCE_BUCKET", "")
-OWNERS = [x.strip() for x in os.getenv("OWNERS", "thayu10").split(",") if x.strip()]
-COMPONENTS = [x.strip() for x in os.getenv("COMPONENTS", "CI-Pipeline,ECS-Service,RDS-Postgres,ALB,VPC").split(",") if x.strip()]
+AWS_REGION = os.getenv("AWS_REGION", os.getenv("AWS_DEFAULT_REGION", "ap-southeast-1"))
 
-ALLOWED_PRIORITIES = {"P1", "P2", "P3"}
-ALLOWED_STATUSES = ["Open", "In Progress", "Blocked", "Resolved", "Closed"]  # linear-ish
-CLOSE_ROLES = {"lead", "admin"}
+app = Flask(__name__)
 
-# AWS region is auto-detected by boto3 from env/metadata in ECS.
-s3 = boto3.client("s3")
-
-app = Flask(__name__, static_folder=".", static_url_path="")
-
-_conn = None
+# --- DB init handling (do NOT crash health checks) ---
+_db_ready = False
 
 
-def utc_now():
-    return datetime.now(timezone.utc)
+def now_iso() -> str:
+    return dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc).isoformat()
 
 
-def iso(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+def require_env() -> Tuple[bool, List[str]]:
+    missing = []
+    for k, v in [
+        ("DB_HOST", DB_HOST),
+        ("DB_NAME", DB_NAME),
+        ("DB_USER", DB_USER),
+        ("DB_PASSWORD", DB_PASSWORD),
+        ("EVIDENCE_BUCKET", EVIDENCE_BUCKET),
+    ]:
+        if not v:
+            missing.append(k)
+    return (len(missing) == 0, missing)
 
 
-def get_identity(required_for_write: bool = False):
-    user = request.headers.get("X-User", "").strip()
-    role = request.headers.get("X-Role", "member").strip().lower()
+def get_identity() -> Tuple[str, str]:
+    user = request.headers.get(HDR_USER, "").strip()
+    role = request.headers.get(HDR_ROLE, "member").strip().lower()
 
-    if required_for_write and not user:
-        return None, None, (jsonify({"error": "Missing X-User header"}), 401)
-
-    # For read-only calls, allow missing user (use "anonymous" for attribution-less reads)
     if not user:
-        user = "anonymous"
+        return "", ""
 
-    if role not in {"member", "lead", "admin"}:
+    if role not in ALLOWED_ROLES:
         role = "member"
 
-    return user, role, None
+    return user, role
+
+
+def require_identity() -> Tuple[Optional[Dict[str, str]], Optional[Tuple[Any, int]]]:
+    user, role = get_identity()
+    if not user:
+        return None, (jsonify({"error": "missing identity header", "required": [HDR_USER]}), 400)
+    return {"user": user, "role": role}, None
 
 
 def db():
-    global _conn
-    if _conn is None or _conn.closed != 0:
-        _conn = psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            connect_timeout=5,
-            cursor_factory=psycopg2.extras.RealDictCursor,
-        )
-        _conn.autocommit = True
-    return _conn
+    return psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        connect_timeout=5,
+        cursor_factory=psycopg2.extras.RealDictCursor,
+    )
 
 
 def init_db():
+    schema_sql = """
+    CREATE TABLE IF NOT EXISTS actions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      owner TEXT NOT NULL,
+      component TEXT NOT NULL,
+      priority TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      resolution_notes TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS evidence (
+      id TEXT PRIMARY KEY,
+      action_id TEXT NOT NULL REFERENCES actions(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      s3_key TEXT NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+    """
     con = db()
-    with con.cursor() as cur:
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS actions (
-              id UUID PRIMARY KEY,
-              title TEXT NOT NULL,
-              description TEXT NOT NULL,
-              owner TEXT NOT NULL,
-              component TEXT NOT NULL,
-              priority TEXT NOT NULL,
-              status TEXT NOT NULL,
-              created_by TEXT NOT NULL,
-              created_at TIMESTAMPTZ NOT NULL,
-              updated_at TIMESTAMPTZ NOT NULL,
-              resolution_notes TEXT,
-              resolved_at TIMESTAMPTZ,
-              closed_at TIMESTAMPTZ
-            );
-            """
-        )
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS evidence (
-              id UUID PRIMARY KEY,
-              action_id UUID NOT NULL REFERENCES actions(id) ON DELETE CASCADE,
-              filename TEXT NOT NULL,
-              s3_key TEXT NOT NULL,
-              content_type TEXT NOT NULL,
-              size_bytes BIGINT,
-              uploaded_by TEXT NOT NULL,
-              uploaded_at TIMESTAMPTZ NOT NULL
-            );
-            """
-        )
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS audit_events (
-              id UUID PRIMARY KEY,
-              action_id UUID NOT NULL REFERENCES actions(id) ON DELETE CASCADE,
-              event_type TEXT NOT NULL,
-              from_status TEXT,
-              to_status TEXT,
-              actor TEXT NOT NULL,
-              notes TEXT,
-              created_at TIMESTAMPTZ NOT NULL
-            );
-            """
-        )
+    try:
+        with con:
+            with con.cursor() as cur:
+                cur.execute(schema_sql)
+    finally:
+        con.close()
 
 
-def add_audit(action_id: uuid.UUID, event_type: str, actor: str, notes: str = None, from_status: str = None, to_status: str = None):
-    con = db()
-    with con.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO audit_events (id, action_id, event_type, from_status, to_status, actor, notes, created_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            """,
-            (uuid.uuid4(), action_id, event_type, from_status, to_status, actor, notes, utc_now()),
-        )
+def ensure_db_ready() -> Tuple[bool, Optional[str]]:
+    """
+    Initialize DB schema once. Never crash the app if DB is unavailable.
+    """
+    global _db_ready
+    if _db_ready:
+        return True, None
+
+    try:
+        init_db()
+        _db_ready = True
+        return True, None
+    except Exception as e:
+        return False, str(e)
 
 
-def normalize_filename(name: str) -> str:
-    name = name.strip()
-    name = re.sub(r"[^\w.\- ]+", "_", name)
-    name = re.sub(r"\s+", "_", name)
-    return name[:160] if name else "file"
+def s3_client():
+    return boto3.client("s3", region_name=AWS_REGION)
 
 
-def require_env():
-    missing = []
-    for k in ["DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD", "EVIDENCE_BUCKET"]:
-        if not os.getenv(k):
-            missing.append(k)
-    if missing:
-        return False, missing
-    return True, []
+def sanitize_filename(name: str) -> str:
+    name = name.strip().replace("\\", "/").split("/")[-1]
+    name = re.sub(r"[^a-zA-Z0-9._-]+", "_", name)
+    return name or "file"
 
+
+def is_lead_or_admin(role: str) -> bool:
+    return role in {"lead", "admin"}
+
+
+def is_admin(role: str) -> bool:
+    return role == "admin"
+
+
+# ----------------------
+# Pages
+# ----------------------
+
+@app.get("/")
+def index():
+    # Serve the single-page UI from /app/index.html via template string fallback.
+    # If you prefer reading from file, keep it simple for now.
+    try:
+        # This assumes index.html is in the same folder and packaged into image.
+        with open(os.path.join(os.path.dirname(__file__), "index.html"), "r", encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        html = "<h1>Infrastructure Action Tracker</h1><p>index.html missing.</p>"
+    return render_template_string(html)
+
+
+# ----------------------
+# Health
+# ----------------------
 
 @app.get("/health")
 def health():
     ok, missing = require_env()
     if not ok:
+        # Return 200 so ALB doesn't kill the target; show degraded state in payload.
         return jsonify({"status": "degraded", "missing_env": missing}), 200
-    # Quick DB check
+
     try:
         con = db()
         with con.cursor() as cur:
             cur.execute("SELECT 1 as ok;")
             row = cur.fetchone()
+        con.close()
         return jsonify({"status": "ok", "db": row["ok"]}), 200
     except Exception as e:
         return jsonify({"status": "degraded", "db_error": str(e)}), 200
 
 
-@app.get("/")
-def index():
-    return send_from_directory(".", "index.html")
-
-
-@app.get("/api/config")
-def api_config():
-    # Read-only; no identity needed
-    return jsonify(
-        {
-            "owners": OWNERS,
-            "components": COMPONENTS,
-            "priorities": sorted(list(ALLOWED_PRIORITIES)),
-            "statuses": ALLOWED_STATUSES,
-        }
-    )
-
+# ----------------------
+# API - Actions
+# ----------------------
 
 @app.get("/api/actions")
 def list_actions():
-    user, role, err = get_identity(required_for_write=False)
+    ident, err = require_identity()
     if err:
         return err
+
+    ready, derr = ensure_db_ready()
+    if not ready:
+        return jsonify({"error": "database not ready", "detail": derr}), 503
 
     status = request.args.get("status")
     owner = request.args.get("owner")
     priority = request.args.get("priority")
     component = request.args.get("component")
-    q = request.args.get("q")
 
-    filters = []
+    q = "SELECT * FROM actions"
+    clauses = []
     params = {}
 
     if status:
-        filters.append("status = %(status)s")
+        clauses.append("status = %(status)s")
         params["status"] = status
     if owner:
-        filters.append("owner = %(owner)s")
+        clauses.append("owner = %(owner)s")
         params["owner"] = owner
     if priority:
-        filters.append("priority = %(priority)s")
+        clauses.append("priority = %(priority)s")
         params["priority"] = priority
     if component:
-        filters.append("component = %(component)s")
+        clauses.append("component = %(component)s")
         params["component"] = component
-    if q:
-        filters.append("(title ILIKE %(q)s OR description ILIKE %(q)s)")
-        params["q"] = f"%{q}%"
 
-    where = ("WHERE " + " AND ".join(filters)) if filters else ""
-    sql = f"""
-        SELECT *
-        FROM actions
-        {where}
-        ORDER BY
-          CASE priority WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 ELSE 3 END,
-          updated_at DESC;
+    if clauses:
+        q += " WHERE " + " AND ".join(clauses)
+
+    # Default view: Status != Closed sorted by Priority then Updated
+    if not status:
+        q += " WHERE status <> 'Closed'"
+
+    q += """
+      ORDER BY
+        CASE priority WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 ELSE 3 END,
+        updated_at DESC
     """
 
     con = db()
-    with con.cursor() as cur:
-        cur.execute(sql, params)
-        rows = cur.fetchall()
-
-    # ISO format timestamps for frontend
-    def convert(r):
-        r = dict(r)
-        for k in ["created_at", "updated_at", "resolved_at", "closed_at"]:
-            if r.get(k):
-                r[k] = iso(r[k])
-        return r
-
-    return jsonify({"items": [convert(r) for r in rows]})
+    try:
+        with con.cursor() as cur:
+            cur.execute(q, params)
+            rows = cur.fetchall()
+        return jsonify({"items": rows, "viewer": ident})
+    finally:
+        con.close()
 
 
 @app.post("/api/actions")
 def create_action():
-    actor, role, err = get_identity(required_for_write=True)
+    ident, err = require_identity()
     if err:
         return err
 
+    ready, derr = ensure_db_ready()
+    if not ready:
+        return jsonify({"error": "database not ready", "detail": derr}), 503
+
     body = request.get_json(force=True, silent=True) or {}
+
     title = (body.get("title") or "").strip()
     description = (body.get("description") or "").strip()
     owner = (body.get("owner") or "").strip()
     component = (body.get("component") or "").strip()
-    priority = (body.get("priority") or "").strip().upper()
+    priority = (body.get("priority") or "").strip()
 
     if not title or not description or not owner or not component or not priority:
-        return jsonify({"error": "title, description, owner, component, priority are required"}), 400
-    if owner not in OWNERS:
-        return jsonify({"error": f"owner must be one of: {OWNERS}"}), 400
-    if component not in COMPONENTS:
-        return jsonify({"error": f"component must be one of: {COMPONENTS}"}), 400
-    if priority not in ALLOWED_PRIORITIES:
-        return jsonify({"error": "priority must be P1, P2, or P3"}), 400
+        return jsonify({"error": "missing required fields"}), 400
 
-    action_id = uuid.uuid4()
-    now = utc_now()
+    if priority not in PRIORITIES:
+        return jsonify({"error": "invalid priority", "allowed": PRIORITIES}), 400
+
+    action_id = str(uuid.uuid4())
+    created_at = now_iso()
 
     con = db()
-    with con.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO actions (id, title, description, owner, component, priority, status, created_by, created_at, updated_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """,
-            (action_id, title, description, owner, component, priority, "Open", actor, now, now),
-        )
-    add_audit(action_id, "created", actor, notes="Action created", to_status="Open")
-
-    return jsonify({"id": str(action_id)}), 201
+    try:
+        with con:
+            with con.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO actions (id, title, description, owner, component, priority, status,
+                                         created_by, created_at, updated_at, resolution_notes)
+                    VALUES (%(id)s, %(title)s, %(description)s, %(owner)s, %(component)s, %(priority)s, %(status)s,
+                            %(created_by)s, %(created_at)s, %(updated_at)s, %(resolution_notes)s)
+                    """,
+                    {
+                        "id": action_id,
+                        "title": title,
+                        "description": description,
+                        "owner": owner,
+                        "component": component,
+                        "priority": priority,
+                        "status": "Open",
+                        "created_by": ident["user"],
+                        "created_at": created_at,
+                        "updated_at": created_at,
+                        "resolution_notes": None,
+                    },
+                )
+        return jsonify({"id": action_id})
+    finally:
+        con.close()
 
 
 @app.patch("/api/actions/<action_id>")
-def update_action(action_id):
-    actor, role, err = get_identity(required_for_write=True)
+def update_action(action_id: str):
+    ident, err = require_identity()
     if err:
         return err
 
-    try:
-        aid = uuid.UUID(action_id)
-    except ValueError:
-        return jsonify({"error": "invalid action id"}), 400
+    ready, derr = ensure_db_ready()
+    if not ready:
+        return jsonify({"error": "database not ready", "detail": derr}), 503
 
     body = request.get_json(force=True, silent=True) or {}
-    fields = {}
-    allowed = {"title", "description", "owner", "component", "priority"}
-    for k in allowed:
-        if k in body and body[k] is not None:
-            fields[k] = (str(body[k]).strip() if k in {"title", "description", "owner", "component"} else str(body[k]).strip().upper())
+    new_status = body.get("status")
+    resolution_notes = body.get("resolution_notes")
 
-    if not fields:
-        return jsonify({"error": "no updatable fields provided"}), 400
+    if new_status and new_status not in STATUSES:
+        return jsonify({"error": "invalid status", "allowed": STATUSES}), 400
 
-    if "owner" in fields and fields["owner"] not in OWNERS:
-        return jsonify({"error": f"owner must be one of: {OWNERS}"}), 400
-    if "component" in fields and fields["component"] not in COMPONENTS:
-        return jsonify({"error": f"component must be one of: {COMPONENTS}"}), 400
-    if "priority" in fields and fields["priority"] not in ALLOWED_PRIORITIES:
-        return jsonify({"error": "priority must be P1, P2, or P3"}), 400
+    # Only leads/admins can close
+    if new_status == "Closed" and not is_lead_or_admin(ident["role"]):
+        return jsonify({"error": "forbidden: only lead/admin can close"}), 403
+
+    # Resolved requires notes
+    if new_status == "Resolved" and not (resolution_notes or "").strip():
+        return jsonify({"error": "resolution_notes required when resolving"}), 400
+
+    updates = []
+    params: Dict[str, Any] = {"id": action_id, "updated_at": now_iso()}
+
+    if new_status:
+        updates.append("status = %(status)s")
+        params["status"] = new_status
+
+    if resolution_notes is not None:
+        updates.append("resolution_notes = %(resolution_notes)s")
+        params["resolution_notes"] = (resolution_notes or "").strip() or None
+
+    if not updates:
+        return jsonify({"error": "no updates provided"}), 400
+
+    updates.append("updated_at = %(updated_at)s")
 
     con = db()
-    with con.cursor() as cur:
-        cur.execute("SELECT * FROM actions WHERE id = %s", (aid,))
-        existing = cur.fetchone()
-        if not existing:
-            return jsonify({"error": "not found"}), 404
-
-        sets = []
-        params = {"id": aid}
-        for i, (k, v) in enumerate(fields.items()):
-            sets.append(f"{k} = %({k})s")
-            params[k] = v
-
-        sets.append("updated_at = %(updated_at)s")
-        params["updated_at"] = utc_now()
-
-        cur.execute(f"UPDATE actions SET {', '.join(sets)} WHERE id = %(id)s", params)
-
-    add_audit(aid, "updated", actor, notes=f"Fields updated: {', '.join(fields.keys())}")
-    return jsonify({"status": "ok"}), 200
-
-
-@app.post("/api/actions/<action_id>/status")
-def update_status(action_id):
-    actor, role, err = get_identity(required_for_write=True)
-    if err:
-        return err
-
     try:
-        aid = uuid.UUID(action_id)
-    except ValueError:
-        return jsonify({"error": "invalid action id"}), 400
+        with con:
+            with con.cursor() as cur:
+                cur.execute(
+                    f"UPDATE actions SET {', '.join(updates)} WHERE id = %(id)s",
+                    params,
+                )
+                if cur.rowcount == 0:
+                    return jsonify({"error": "not found"}), 404
+        return jsonify({"ok": True})
+    finally:
+        con.close()
 
-    body = request.get_json(force=True, silent=True) or {}
-    to_status = (body.get("to_status") or "").strip()
-    resolution_notes = (body.get("resolution_notes") or "").strip()
 
-    if to_status not in ALLOWED_STATUSES:
-        return jsonify({"error": f"to_status must be one of: {ALLOWED_STATUSES}"}), 400
-
-    con = db()
-    with con.cursor() as cur:
-        cur.execute("SELECT * FROM actions WHERE id = %s", (aid,))
-        row = cur.fetchone()
-        if not row:
-            return jsonify({"error": "not found"}), 404
-
-        from_status = row["status"]
-
-        # Basic workflow checks
-        if from_status == "Closed":
-            return jsonify({"error": "Closed actions cannot be changed"}), 409
-
-        if to_status == "Resolved" and not resolution_notes:
-            return jsonify({"error": "resolution_notes is required when setting status to Resolved"}), 400
-
-        if to_status == "Closed":
-            if role not in CLOSE_ROLES:
-                return jsonify({"error": "Only lead/admin can close actions"}), 403
-            # Closing is only allowed from Resolved
-            if from_status != "Resolved":
-                return jsonify({"error": "Action must be Resolved before it can be Closed"}), 409
-
-        now = utc_now()
-        resolved_at = row["resolved_at"]
-        closed_at = row["closed_at"]
-
-        updates = {"status": to_status, "updated_at": now}
-        if to_status == "Resolved":
-            updates["resolution_notes"] = resolution_notes
-            updates["resolved_at"] = now
-        if to_status == "Closed":
-            updates["closed_at"] = now
-
-        set_parts = []
-        params = {"id": aid}
-        for k, v in updates.items():
-            set_parts.append(f"{k} = %({k})s")
-            params[k] = v
-
-        cur.execute(f"UPDATE actions SET {', '.join(set_parts)} WHERE id = %(id)s", params)
-
-    add_audit(aid, "status_changed", actor, notes=resolution_notes if to_status == "Resolved" else None, from_status=from_status, to_status=to_status)
-    return jsonify({"status": "ok"}), 200
-
+# ----------------------
+# API - Evidence
+# ----------------------
 
 @app.get("/api/actions/<action_id>/evidence")
-def list_evidence(action_id):
-    actor, role, err = get_identity(required_for_write=False)
+def list_evidence(action_id: str):
+    ident, err = require_identity()
     if err:
         return err
 
-    try:
-        aid = uuid.UUID(action_id)
-    except ValueError:
-        return jsonify({"error": "invalid action id"}), 400
+    ready, derr = ensure_db_ready()
+    if not ready:
+        return jsonify({"error": "database not ready", "detail": derr}), 503
 
     con = db()
-    with con.cursor() as cur:
-        cur.execute("SELECT id, filename, s3_key, content_type, size_bytes, uploaded_by, uploaded_at FROM evidence WHERE action_id = %s ORDER BY uploaded_at DESC", (aid,))
-        rows = cur.fetchall()
-
-    items = []
-    for r in rows:
-        rr = dict(r)
-        rr["id"] = str(rr["id"])
-        rr["uploaded_at"] = iso(rr["uploaded_at"])
-        items.append(rr)
-
-    return jsonify({"items": items}), 200
+    try:
+        with con.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM evidence WHERE action_id = %(aid)s ORDER BY created_at DESC",
+                {"aid": action_id},
+            )
+            rows = cur.fetchall()
+        return jsonify({"items": rows})
+    finally:
+        con.close()
 
 
-@app.post("/api/actions/<action_id>/evidence/presign")
-def presign_evidence(action_id):
-    actor, role, err = get_identity(required_for_write=True)
+@app.post("/api/actions/<action_id>/evidence")
+def upload_evidence(action_id: str):
+    ident, err = require_identity()
     if err:
         return err
 
-    try:
-        aid = uuid.UUID(action_id)
-    except ValueError:
-        return jsonify({"error": "invalid action id"}), 400
+    ready, derr = ensure_db_ready()
+    if not ready:
+        return jsonify({"error": "database not ready", "detail": derr}), 503
 
     if not EVIDENCE_BUCKET:
         return jsonify({"error": "EVIDENCE_BUCKET not configured"}), 500
 
     body = request.get_json(force=True, silent=True) or {}
-    filename = normalize_filename(body.get("filename") or "")
-    content_type = (body.get("content_type") or "application/octet-stream").strip()
+    filename = sanitize_filename(body.get("filename") or "")
+    content_b64 = body.get("content_base64") or ""
 
-    # Key: actions/<action_id>/<uuid>_<filename>
-    obj_id = uuid.uuid4()
-    key = f"actions/{aid}/{obj_id}_{filename}"
-
-    try:
-        url = s3.generate_presigned_url(
-            ClientMethod="put_object",
-            Params={"Bucket": EVIDENCE_BUCKET, "Key": key, "ContentType": content_type},
-            ExpiresIn=900,
-        )
-    except Exception as e:
-        return jsonify({"error": f"presign failed: {str(e)}"}), 500
-
-    # Client should PUT directly to S3, then call /confirm to record metadata in DB
-    return jsonify(
-        {
-            "upload_url": url,
-            "s3_key": key,
-            "expires_in_seconds": 900,
-        }
-    ), 200
-
-
-@app.post("/api/actions/<action_id>/evidence/confirm")
-def confirm_evidence(action_id):
-    actor, role, err = get_identity(required_for_write=True)
-    if err:
-        return err
+    if not filename or not content_b64:
+        return jsonify({"error": "filename and content_base64 required"}), 400
 
     try:
-        aid = uuid.UUID(action_id)
-    except ValueError:
-        return jsonify({"error": "invalid action id"}), 400
+        raw = base64.b64decode(content_b64, validate=True)
+    except Exception:
+        return jsonify({"error": "invalid base64"}), 400
 
-    body = request.get_json(force=True, silent=True) or {}
-    filename = normalize_filename(body.get("filename") or "")
-    s3_key = (body.get("s3_key") or "").strip()
-    content_type = (body.get("content_type") or "application/octet-stream").strip()
-    size_bytes = body.get("size_bytes")
+    # Keep uploads reasonably small for demo
+    if len(raw) > 5 * 1024 * 1024:
+        return jsonify({"error": "file too large (max 5MB)"}), 400
 
-    if not filename or not s3_key:
-        return jsonify({"error": "filename and s3_key are required"}), 400
+    evidence_id = str(uuid.uuid4())
+    created_at = now_iso()
+    s3_key = f"{EVIDENCE_PREFIX}/{action_id}/{evidence_id}-{filename}"
 
-    evid = uuid.uuid4()
-    now = utc_now()
+    s3 = s3_client()
+    s3.put_object(
+        Bucket=EVIDENCE_BUCKET,
+        Key=s3_key,
+        Body=raw,
+        ContentType="application/octet-stream",
+        ServerSideEncryption="AES256",
+    )
 
     con = db()
-    with con.cursor() as cur:
-        # Ensure action exists
-        cur.execute("SELECT id FROM actions WHERE id = %s", (aid,))
-        if not cur.fetchone():
-            return jsonify({"error": "action not found"}), 404
-
-        cur.execute(
-            """
-            INSERT INTO evidence (id, action_id, filename, s3_key, content_type, size_bytes, uploaded_by, uploaded_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            """,
-            (evid, aid, filename, s3_key, content_type, size_bytes, actor, now),
-        )
-
-        # Touch action updated_at
-        cur.execute("UPDATE actions SET updated_at = %s WHERE id = %s", (now, aid))
-
-    add_audit(aid, "evidence_attached", actor, notes=f"{filename} -> {s3_key}")
-    return jsonify({"id": str(evid)}), 201
-
-
-@app.get("/api/actions/<action_id>/audit")
-def list_audit(action_id):
-    actor, role, err = get_identity(required_for_write=False)
-    if err:
-        return err
-
     try:
-        aid = uuid.UUID(action_id)
-    except ValueError:
-        return jsonify({"error": "invalid action id"}), 400
-
-    con = db()
-    with con.cursor() as cur:
-        cur.execute(
-            """
-            SELECT id, event_type, from_status, to_status, actor, notes, created_at
-            FROM audit_events
-            WHERE action_id = %s
-            ORDER BY created_at DESC
-            """,
-            (aid,),
-        )
-        rows = cur.fetchall()
-
-    items = []
-    for r in rows:
-        rr = dict(r)
-        rr["id"] = str(rr["id"])
-        rr["created_at"] = iso(rr["created_at"])
-        items.append(rr)
-
-    return jsonify({"items": items}), 200
+        with con:
+            with con.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO evidence (id, action_id, filename, s3_key, created_by, created_at)
+                    VALUES (%(id)s, %(action_id)s, %(filename)s, %(s3_key)s, %(created_by)s, %(created_at)s)
+                    """,
+                    {
+                        "id": evidence_id,
+                        "action_id": action_id,
+                        "filename": filename,
+                        "s3_key": s3_key,
+                        "created_by": ident["user"],
+                        "created_at": created_at,
+                    },
+                )
+        return jsonify({"id": evidence_id, "s3_key": s3_key})
+    finally:
+        con.close()
 
 
-@app.before_first_request
-def _startup():
-    # Initialize DB schema lazily on first request
-    # (works well in ECS where container can restart; idempotent DDL)
-    init_db()
-
+# ----------------------
+# Run
+# ----------------------
 
 if __name__ == "__main__":
-    # Local dev
-    init_db()
+    # Do NOT hard-init DB here; let the app come up even if DB is temporarily unavailable.
     app.run(host="0.0.0.0", port=APP_PORT)
