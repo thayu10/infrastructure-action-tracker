@@ -1,0 +1,66 @@
+############################
+# Python
+############################
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+############################
+# Terraform
+############################
+# Local Terraform directories
+**/.terraform/
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+
+# Terraform override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform lock file (ignore if you don’t want provider version pinning committed)
+.terraform.lock.hcl
+
+############################
+# Docker
+############################
+# Local Docker files
+docker-compose.override.yml
+
+############################
+# OS / Editor
+############################
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+############################
+# Logs
+############################
+*.log
+
+############################
+# Secrets / local configs
+############################
+*.env
+.env
+.env.*
