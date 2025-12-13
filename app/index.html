@@ -45,9 +45,7 @@
       position: sticky; top: 10px; z-index: 5;
       backdrop-filter: blur(10px);
     }
-    .title{
-      display:flex; flex-direction:column; gap:6px;
-    }
+    .title{ display:flex; flex-direction:column; gap:6px; }
     h1{ margin:0; font-size:20px; letter-spacing:.2px; }
     .subtitle{
       margin:0;
@@ -83,6 +81,10 @@
     .btn.primary{
       border-color: rgba(46,168,255,.85);
       background: rgba(46,168,255,.12);
+    }
+    .btn.good{
+      border-color: rgba(40,209,124,.70);
+      background: rgba(40,209,124,.10);
     }
     .grid{
       margin-top:14px;
@@ -120,11 +122,7 @@
       font-size:13px;
     }
     textarea{ min-height:92px; resize:vertical; }
-    .hint{
-      margin-top:10px;
-      color:var(--muted);
-      font-size:12px;
-    }
+    .hint{ margin-top:10px; color:var(--muted); font-size:12px; }
     table{ width:100%; border-collapse: collapse; overflow:hidden; border-radius: 14px; }
     th, td{
       border-bottom: 1px solid rgba(28,63,102,.55);
@@ -133,12 +131,7 @@
       font-size:13px;
       vertical-align: top;
     }
-    th{
-      color: var(--muted);
-      font-weight:700;
-      font-size:12px;
-      letter-spacing:.2px;
-    }
+    th{ color: var(--muted); font-weight:700; font-size:12px; letter-spacing:.2px; }
     tr:hover td{ background: rgba(10,42,82,.18); }
     .pill{
       display:inline-block;
@@ -158,11 +151,7 @@
     .pill.resolved{ border-color: rgba(40,209,124,.55); color:#d9ffe9; }
     .pill.closed{ border-color: rgba(169,195,230,.45); color: var(--muted); }
     .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
-    .link{
-      color: var(--accent);
-      text-decoration: none;
-      font-weight:600;
-    }
+    .link{ color: var(--accent); text-decoration: none; font-weight:600; }
     .link:hover{ text-decoration: underline; }
 
     /* Modal */
@@ -212,14 +201,12 @@
       height:1px; background: rgba(28,63,102,.55);
       margin: 12px 0;
     }
-    .footer{
-      display:flex; justify-content:flex-end; gap:10px; margin-top: 10px;
-    }
+    .footer{ display:flex; justify-content:flex-end; gap:10px; margin-top: 10px; }
     .toast{
       position: fixed;
       bottom: 16px;
       right: 16px;
-      max-width: 360px;
+      max-width: 420px;
       padding: 12px 12px;
       border-radius: 14px;
       border:1px solid rgba(28,63,102,.7);
@@ -232,8 +219,35 @@
       line-height: 1.35;
     }
     .toast small{ color: var(--muted); display:block; margin-top:6px; font-family: var(--mono); font-size:12px; }
+    .evidence-box{
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(28,63,102,.7);
+      background: rgba(6,18,35,.35);
+    }
+    .evidence-list{
+      margin: 10px 0 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .evidence-list li{
+      padding: 8px 8px;
+      border-bottom: 1px solid rgba(28,63,102,.45);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+    }
+    .evidence-list code{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: #d7efff;
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="topbar">
@@ -335,7 +349,7 @@
         </div>
 
         <div class="modal-full">
-          <label>Description</label>
+          <label>Description (markdown-style text supported)</label>
           <textarea id="m-description">- What happened
 - Link to dashboard/logs
 - Error snippet</textarea>
@@ -353,6 +367,25 @@
             <textarea id="m-resolution" placeholder="What fixed it? What changed?"></textarea>
           </div>
         </div>
+
+        <!-- Evidence Upload -->
+        <div class="modal-full">
+          <div class="sep"></div>
+          <label>Attach Evidence</label>
+          <div class="evidence-box">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <input type="file" id="m-file" />
+              <button class="btn good" id="btn-upload">Upload</button>
+              <span class="chip" id="chip-actionid">Action ID: (save first)</span>
+            </div>
+            <div class="hint" style="margin-top:10px;">
+              Evidence is stored in S3 and linked to this action record. Save the action first, then upload.
+            </div>
+            <ul class="evidence-list" id="evidence-list">
+              <li style="border-bottom:none; padding:6px 0; color:var(--muted);">No evidence uploaded yet.</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="footer">
@@ -364,10 +397,6 @@
   <div class="toast" id="toast"></div>
 
 <script>
-  // -----------------------------
-  // Configurable dropdown sources
-  // -----------------------------
-  // Keep these simple and recruiter-friendly: you can change the lists without touching backend.
   const CONFIG = {
     owners: ["thayu10", "devops", "platform", "oncall"],
     components: ["ECS-Service", "ALB", "RDS-Postgres", "CI/CD", "IAM", "S3", "VPC", "CloudWatch"],
@@ -375,9 +404,6 @@
     statuses: ["Open", "In Progress", "Blocked", "Resolved", "Closed"]
   };
 
-  // -----------------------------
-  // Identity headers
-  // -----------------------------
   let X_USER = localStorage.getItem("iat_x_user") || "thayu10";
   let X_ROLE = localStorage.getItem("iat_x_role") || "admin";
 
@@ -389,18 +415,14 @@
     document.getElementById("chip-user").textContent = `X-User: ${X_USER || "(unset)"}`;
     document.getElementById("chip-role").textContent = `X-Role: ${X_ROLE || "member"}`;
   }
-
   setIdentity(X_USER, X_ROLE);
 
-  // -----------------------------
-  // Helpers
-  // -----------------------------
   function toast(msg, meta){
     const el = document.getElementById("toast");
     el.innerHTML = `${escapeHtml(msg)}${meta ? `<small>${escapeHtml(meta)}</small>` : ""}`;
     el.style.display = "block";
     clearTimeout(window.__toastTimer);
-    window.__toastTimer = setTimeout(() => el.style.display = "none", 3600);
+    window.__toastTimer = setTimeout(() => el.style.display = "none", 4200);
   }
 
   function escapeHtml(s){
@@ -410,21 +432,14 @@
   }
 
   function fmtDate(iso){
-    try{
-      const d = new Date(iso);
-      return d.toLocaleString();
-    }catch(e){
-      return iso || "";
-    }
+    try{ return new Date(iso).toLocaleString(); }
+    catch(e){ return iso || ""; }
   }
 
   function pill(cls, text){
     return `<span class="pill ${cls}">${escapeHtml(text)}</span>`;
   }
-
-  function priClass(p){
-    return (p || "").toLowerCase();
-  }
+  function priClass(p){ return (p || "").toLowerCase(); }
   function statusClass(s){
     const t = (s || "").toLowerCase();
     if (t.includes("open")) return "open";
@@ -468,9 +483,6 @@
     }
   }
 
-  // -----------------------------
-  // Populate dropdowns (fixes your issue)
-  // -----------------------------
   const fStatus = document.getElementById("f-status");
   const fPriority = document.getElementById("f-priority");
   const fOwner = document.getElementById("f-owner");
@@ -491,31 +503,33 @@
   fillSelect(mComponent, CONFIG.components);
   fillSelect(mStatus, CONFIG.statuses);
 
-  // Defaults for modal
   mPriority.value = "P2";
   mOwner.value = CONFIG.owners[0] || "";
   mComponent.value = CONFIG.components[0] || "";
   mStatus.value = "Open";
 
-  // -----------------------------
-  // Modal controls
-  // -----------------------------
   const backdrop = document.getElementById("modal-backdrop");
+  const chipActionId = document.getElementById("chip-actionid");
+  const evidenceList = document.getElementById("evidence-list");
+  let currentActionId = null;
+
+  function resetModal(){
+    currentActionId = null;
+    chipActionId.textContent = "Action ID: (save first)";
+    evidenceList.innerHTML = `<li style="border-bottom:none; padding:6px 0; color:var(--muted);">No evidence uploaded yet.</li>`;
+    document.getElementById("m-file").value = "";
+  }
+
   function openModal(){
+    resetModal();
     backdrop.style.display = "flex";
   }
-  function closeModal(){
-    backdrop.style.display = "none";
-  }
+  function closeModal(){ backdrop.style.display = "none"; }
+
   document.getElementById("btn-new").addEventListener("click", openModal);
   document.getElementById("btn-close").addEventListener("click", closeModal);
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) closeModal();
-  });
+  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
 
-  // -----------------------------
-  // Data + rendering
-  // -----------------------------
   let cache = [];
 
   function applyFilters(items){
@@ -569,7 +583,6 @@
       </tr>
     `).join("");
 
-    // action links
     rows.querySelectorAll("a[data-open]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.open, "Open"); }));
     rows.querySelectorAll("a[data-progress]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.progress, "In Progress"); }));
     rows.querySelectorAll("a[data-block]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.block, "Blocked"); }));
@@ -583,14 +596,12 @@
       render();
     }catch(e){
       cache = [];
-      document.getElementById("rows").innerHTML = `<tr><td colspan="7" style="color:var(--bad);">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+      document.getElementById("rows").innerHTML =
+        `<tr><td colspan="7" style="color:var(--bad);">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
       toast("Failed to load actions", e.message);
     }
   }
 
-  // -----------------------------
-  // Mutations
-  // -----------------------------
   async function createAction(){
     const title = document.getElementById("m-title").value.trim();
     const description = document.getElementById("m-description").value.trim();
@@ -600,7 +611,7 @@
 
     if (!title || !description || !owner || !component || !priority){
       toast("Missing fields", "Title, Description, Owner, Component, Priority are required.");
-      return;
+      return null;
     }
 
     try{
@@ -608,20 +619,25 @@
         method: "POST",
         body: JSON.stringify({ title, description, owner, component, priority })
       });
-      toast("Action created", res && res.id ? `id=${res.id}` : "");
-      closeModal();
+      const id = res && res.id ? res.id : null;
+      if (id){
+        currentActionId = id;
+        chipActionId.textContent = `Action ID: ${id}`;
+        toast("Action created", `id=${id} (you can now upload evidence)`);
+      }else{
+        toast("Action created", "No id returned (unexpected).");
+      }
       await refresh();
+      return id;
     }catch(e){
       toast("Create failed", e.message);
+      return null;
     }
   }
 
   async function quickUpdate(id, status){
     try{
-      await api(`/api/actions/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status })
-      });
+      await api(`/api/actions/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
       toast("Updated", `${id} → ${status}`);
       await refresh();
     }catch(e){
@@ -647,7 +663,71 @@
     }
   }
 
-  // modal status apply (for the "New Action" form)
+  async function loadEvidence(actionId){
+    try{
+      const res = await api(`/api/actions/${actionId}/evidence`, { method: "GET" });
+      const items = (res && res.items) ? res.items : [];
+      if (!items.length){
+        evidenceList.innerHTML = `<li style="border-bottom:none; padding:6px 0; color:var(--muted);">No evidence uploaded yet.</li>`;
+        return;
+      }
+      evidenceList.innerHTML = items.map(it => `
+        <li>
+          <div>
+            <div style="font-weight:700; color:var(--text);">${escapeHtml(it.filename)}</div>
+            <div style="margin-top:4px;"><code>${escapeHtml(it.s3_key)}</code></div>
+            <div style="margin-top:4px; color:var(--muted);">by ${escapeHtml(it.created_by)} @ ${escapeHtml(fmtDate(it.created_at))}</div>
+          </div>
+        </li>
+      `).join("");
+    }catch(e){
+      toast("Failed to load evidence", e.message);
+    }
+  }
+
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result || "";
+        const parts = String(res).split(",");
+        resolve(parts.length > 1 ? parts[1] : "");
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadEvidence(){
+    if (!currentActionId){
+      toast("Save the action first", "Evidence must be attached to an existing action.");
+      return;
+    }
+    const input = document.getElementById("m-file");
+    const file = input.files && input.files[0] ? input.files[0] : null;
+    if (!file){
+      toast("No file selected", "Choose a file first.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024){
+      toast("File too large", "Max 5MB for this demo.");
+      return;
+    }
+
+    try{
+      const b64 = await fileToBase64(file);
+      await api(`/api/actions/${currentActionId}/evidence`, {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, content_base64: b64 })
+      });
+      toast("Evidence uploaded", file.name);
+      input.value = "";
+      await loadEvidence(currentActionId);
+    }catch(e){
+      toast("Upload failed", e.message);
+    }
+  }
+
   document.getElementById("btn-apply-status").addEventListener("click", () => {
     const s = mStatus.value;
     if (s === "Resolved"){
@@ -661,10 +741,13 @@
     toast("Lifecycle set", `New action will start as ${s} after you Save.`);
   });
 
-  // Save
-  document.getElementById("btn-save").addEventListener("click", createAction);
+  document.getElementById("btn-save").addEventListener("click", async () => {
+    const id = await createAction();
+    if (id) await loadEvidence(id);
+  });
 
-  // Header refresh / clear filters
+  document.getElementById("btn-upload").addEventListener("click", uploadEvidence);
+
   document.getElementById("btn-refresh").addEventListener("click", refresh);
   document.getElementById("btn-clear").addEventListener("click", () => {
     document.getElementById("q").value = "";
@@ -675,13 +758,11 @@
     render();
   });
 
-  // filter reactive updates
   ["q","f-status","f-priority","f-owner","f-component"].forEach(id => {
     document.getElementById(id).addEventListener("input", render);
     document.getElementById(id).addEventListener("change", render);
   });
 
-  // initial load
   refresh();
 </script>
 </body>
