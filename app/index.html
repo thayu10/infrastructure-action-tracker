@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Infrastructure Action Tracker</title>
+  <style>
+    :root{
+      --bg: #071427;
+      --panel: #0b2342;
+      --panel2:#0a1c34;
+      --text: #dbeafe;
+      --muted:#93c5fd;
+      --line: rgba(147,197,253,.18);
+      --accent:#60a5fa;
+      --accent2:#38bdf8;
+      --danger:#fb7185;
+      --ok:#34d399;
+      --warn:#fbbf24;
+      --chip:#0b2b55;
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      background: radial-gradient(1200px 800px at 20% -10%, rgba(96,165,250,.25), transparent 55%),
+                  radial-gradient(1000px 700px at 100% 0%, rgba(56,189,248,.18), transparent 50%),
+                  var(--bg);
+      color: var(--text);
+    }
+    header{
+      position:sticky; top:0;
+      background: rgba(7,20,39,.75);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+      z-index: 5;
+    }
+    .wrap{ max-width: 1200px; margin:0 auto; padding: 16px 18px; }
+    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    h1{ margin:0; font-size: 18px; letter-spacing:.2px; }
+    .badge{
+      font-family: var(--mono);
+      font-size:12px;
+      padding:6px 10px;
+      border:1px solid var(--line);
+      background: rgba(11,35,66,.65);
+      border-radius: 999px;
+      color: var(--muted);
+    }
+    .panel{
+      background: linear-gradient(180deg, rgba(11,35,66,.85), rgba(10,28,52,.85));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .controls{
+      display:grid;
+      grid-template-columns: 1.2fr repeat(4, minmax(120px, .8fr)) auto;
+      gap:10px;
+      align-items:center;
+    }
+    input, select, textarea{
+      width:100%;
+      padding:10px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(7,20,39,.55);
+      color: var(--text);
+      outline:none;
+    }
+    textarea{ min-height: 120px; resize: vertical; }
+    input::placeholder{ color: rgba(147,197,253,.6); }
+    button{
+      border: 1px solid rgba(96,165,250,.35);
+      background: linear-gradient(180deg, rgba(96,165,250,.22), rgba(96,165,250,.08));
+      color: var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      transition: transform .04s ease;
+      font-weight: 600;
+    }
+    button:hover{ transform: translateY(-1px); }
+    button.secondary{
+      border: 1px solid var(--line);
+      background: rgba(7,20,39,.35);
+      font-weight: 600;
+    }
+    button.danger{
+      border: 1px solid rgba(251,113,133,.45);
+      background: rgba(251,113,133,.12);
+    }
+    button.ok{
+      border: 1px solid rgba(52,211,153,.45);
+      background: rgba(52,211,153,.12);
+    }
+    main{ padding: 18px; }
+    table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow:hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+    }
+    th, td{
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      font-size: 13px;
+    }
+    th{
+      text-align:left;
+      color: var(--muted);
+      background: rgba(7,20,39,.45);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .2px;
+    }
+    tr:last-child td{ border-bottom:none; }
+    .chip{
+      display:inline-block;
+      padding:5px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(11,43,85,.55);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .chip.p1{ border-color: rgba(251,113,133,.45); }
+    .chip.p2{ border-color: rgba(251,191,36,.45); }
+    .chip.p3{ border-color: rgba(52,211,153,.45); }
+    .link{
+      color: var(--accent2);
+      text-decoration:none;
+      cursor:pointer;
+    }
+    .muted{ color: rgba(147,197,253,.75); }
+    .two{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+    }
+    .modal{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index: 50;
+    }
+    .modal.open{ display:flex; }
+    .modal-card{
+      width: min(980px, 100%);
+      max-height: 92vh;
+      overflow:auto;
+      padding: 16px;
+    }
+    .modal-title{
+      display:flex;
+      justify-content: space-between;
+      align-items:center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .modal-title h2{ margin:0; font-size: 16px; }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .grid3{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .hr{
+      height:1px;
+      background: var(--line);
+      margin: 12px 0;
+    }
+    .mini{
+      font-size: 12px;
+      color: rgba(147,197,253,.8);
+      font-family: var(--mono);
+    }
+    .toast{
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(11,35,66,.92);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      display:none;
+      z-index: 80;
+      font-size: 13px;
+    }
+    .toast.show{ display:block; }
+    @media (max-width: 980px){
+      .controls{ grid-template-columns: 1fr 1fr 1fr; }
+      .two{ grid-template-columns: 1fr; }
+      .grid, .grid3{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap row" style="justify-content:space-between;">
+      <div class="row">
+        <h1>Infrastructure Action Tracker</h1>
+        <span class="badge" id="whoami">X-User: (not set)</span>
+        <span class="badge" id="rolebadge">X-Role: member</span>
+      </div>
+      <div class="row">
+        <button id="newBtn">New Action</button>
+        <button class="secondary" id="refreshBtn">Refresh</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="panel" style="padding:14px; margin-bottom:14px;">
+      <div class="controls">
+        <input id="q" placeholder="Search title/description…" />
+        <select id="fStatus"></select>
+        <select id="fPriority"></select>
+        <select id="fOwner"></select>
+        <select id="fComponent"></select>
+        <button class="secondary" id="clearBtn">Clear</button>
+      </div>
+      <div class="mini" style="margin-top:10px;">
+        Tip: for write actions in ECS/ALB, supply headers <span class="chip">X-User</span> and optional <span class="chip">X-Role</span>.
+      </div>
+    </div>
+
+    <div class="panel" style="padding:0;">
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Title</th>
+            <th>Owner</th>
+            <th>Component</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="6" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- New/Edit Modal -->
+  <div class="modal" id="modal">
+    <div class="panel modal-card">
+      <div class="modal-title">
+        <h2 id="modalHeading">New Action</h2>
+        <div class="row">
+          <button class="secondary" id="closeModal">Close</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <label class="mini">Title (imperative + specific)</label>
+          <input id="mTitle" placeholder="Restart the stuck ECS service in prod-us-east-1" />
+        </div>
+        <div class="grid3">
+          <div>
+            <label class="mini">Priority</label>
+            <select id="mPriority"></select>
+          </div>
+          <div>
+            <label class="mini">Owner</label>
+            <select id="mOwner"></select>
+          </div>
+          <div>
+            <label class="mini">Component</label>
+            <select id="mComponent"></select>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label class="mini">Description (markdown-style text supported)</label>
+        <textarea id="mDesc" placeholder="- What happened
+- Link to dashboard/logs
+- Error snippet"></textarea>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="two">
+        <div>
+          <div class="row" style="justify-content:space-between;">
+            <div class="mini">Lifecycle</div>
+            <span class="muted mini" id="mActionId"></span>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <select id="mStatus"></select>
+            <button class="secondary" id="applyStatusBtn">Apply Status</button>
+          </div>
+          <div style="margin-top:8px;">
+            <label class="mini">Resolution Notes (required for Resolved)</label>
+            <textarea id="mResolution" placeholder="What fixed it? What changed?"></textarea>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button id="saveBtn" class="ok">Save</button>
+            <button id="updateBtn" class="ok" style="display:none;">Update</button>
+          </div>
+
+          <div class="mini" style="margin-top:8px;">
+            Close requires <span class="chip">X-Role: lead</span> or <span class="chip">admin</span>.
+          </div>
+        </div>
+
+        <div>
+          <div class="row" style="justify-content:space-between;">
+            <div class="mini">Evidence</div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <input type="file" id="fileInput" />
+            <button class="secondary" id="uploadBtn">Upload</button>
+          </div>
+          <div class="mini" style="margin-top:8px;">
+            Upload uses a presigned S3 URL. Files never go through the app server.
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="mini">Evidence list</div>
+          <div id="evidenceList" class="muted" style="margin-top:8px;">No evidence yet.</div>
+
+          <div class="hr"></div>
+
+          <div class="mini">Audit trail</div>
+          <div id="auditList" class="muted" style="margin-top:8px;">No events yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // ---- Client-side “identity” (for local/demo). In ECS behind ALB, you can inject via ALB rules, a proxy, or test tools.
+  // In browser, we can’t set custom headers on normal navigation, but we can set them on fetch() calls.
+  // For demo: store identity in localStorage.
+  const identity = {
+    user: localStorage.getItem("x_user") || "",
+    role: localStorage.getItem("x_role") || "member"
+  };
+
+  function setBadges(){
+    document.getElementById("whoami").textContent = "X-User: " + (identity.user || "(not set)");
+    document.getElementById("rolebadge").textContent = "X-Role: " + (identity.role || "member");
+  }
+
+  function toast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"), 2400);
+  }
+
+  async function api(path, opts={}){
+    const headers = Object.assign({}, opts.headers || {});
+    if(identity.user) headers["X-User"] = identity.user;
+    if(identity.role) headers["X-Role"] = identity.role;
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+    const res = await fetch(path, Object.assign({}, opts, { headers }));
+    const data = await res.json().catch(()=> ({}));
+    if(!res.ok){
+      throw new Error(data.error || ("HTTP " + res.status));
+    }
+    return data;
+  }
+
+  // ---- State
+  let config = null;
+  let actions = [];
+  let selectedId = null;
+
+  // ---- Elements
+  const tbody = document.getElementById("tbody");
+  const modal = document.getElementById("modal");
+
+  const fStatus = document.getElementById("fStatus");
+  const fPriority = document.getElementById("fPriority");
+  const fOwner = document.getElementById("fOwner");
+  const fComponent = document.getElementById("fComponent");
+  const q = document.getElementById("q");
+
+  const mTitle = document.getElementById("mTitle");
+  const mDesc = document.getElementById("mDesc");
+  const mOwner = document.getElementById("mOwner");
+  const mComponent = document.getElementById("mComponent");
+  const mPriority = document.getElementById("mPriority");
+  const mStatus = document.getElementById("mStatus");
+  const mResolution = document.getElementById("mResolution");
+  const mActionId = document.getElementById("mActionId");
+  const evidenceList = document.getElementById("evidenceList");
+  const auditList = document.getElementById("auditList");
+
+  const saveBtn = document.getElementById("saveBtn");
+  const updateBtn = document.getElementById("updateBtn");
+
+  function option(el, val, text){
+    const o = document.createElement("option");
+    o.value = val;
+    o.textContent = text ?? val;
+    el.appendChild(o);
+  }
+
+  function resetModalForNew(){
+    selectedId = null;
+    document.getElementById("modalHeading").textContent = "New Action";
+    saveBtn.style.display = "inline-block";
+    updateBtn.style.display = "none";
+
+    mActionId.textContent = "";
+    mTitle.value = "";
+    mDesc.value = "";
+    mResolution.value = "";
+    mStatus.value = "Open";
+    evidenceList.textContent = "Create the action first to attach evidence.";
+    auditList.textContent = "No events yet.";
+  }
+
+  function openModal(){
+    modal.classList.add("open");
+  }
+  function closeModal(){
+    modal.classList.remove("open");
+  }
+
+  function chipPriority(p){
+    const cls = p === "P1" ? "p1" : (p === "P2" ? "p2" : "p3");
+    return `<span class="chip ${cls}">${p}</span>`;
+  }
+  function chip(s){ return `<span class="chip">${s}</span>`; }
+
+  function renderTable(){
+    if(!actions.length){
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">No actions found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = actions.map(a => `
+      <tr>
+        <td>${chipPriority(a.priority)}</td>
+        <td>${chip(a.status)}</td>
+        <td><a class="link" data-id="${a.id}">${escapeHtml(a.title)}</a><div class="muted" style="margin-top:6px; font-size:12px;">Created by <span class="chip">${escapeHtml(a.created_by)}</span> • ${fmt(a.created_at)}</div></td>
+        <td>${chip(escapeHtml(a.owner))}</td>
+        <td>${chip(escapeHtml(a.component))}</td>
+        <td class="muted">${fmt(a.updated_at)}</td>
+      </tr>
+    `).join("");
+    tbody.querySelectorAll("a.link").forEach(a => {
+      a.addEventListener("click", () => openExisting(a.getAttribute("data-id")));
+    });
+  }
+
+  function fmt(isoStr){
+    if(!isoStr) return "";
+    const d = new Date(isoStr);
+    return d.toLocaleString();
+  }
+
+  function escapeHtml(s){
+    return (s || "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+
+  async function loadConfig(){
+    config = await api("/api/config", { method: "GET", headers: {"Content-Type":"application/json"} });
+    // Filters
+    fStatus.innerHTML = ""; option(fStatus, "", "Status (all)"); config.statuses.forEach(x => option(fStatus, x, x));
+    fPriority.innerHTML = ""; option(fPriority, "", "Priority (all)"); config.priorities.forEach(x => option(fPriority, x, x));
+    fOwner.innerHTML = ""; option(fOwner, "", "Owner (all)"); config.owners.forEach(x => option(fOwner, x, x));
+    fComponent.innerHTML = ""; option(fComponent, "", "Component (all)"); config.components.forEach(x => option(fComponent, x, x));
+
+    // Modal selects
+    mPriority.innerHTML = ""; config.priorities.forEach(x => option(mPriority, x, x));
+    mOwner.innerHTML = ""; config.owners.forEach(x => option(mOwner, x, x));
+    mComponent.innerHTML = ""; config.components.forEach(x => option(mComponent, x, x));
+    mStatus.innerHTML = ""; config.statuses.forEach(x => option(mStatus, x, x));
+  }
+
+  function buildQuery(){
+    const params = new URLSearchParams();
+    if(q.value.trim()) params.set("q", q.value.trim());
+    if(fStatus.value) params.set("status", fStatus.value);
+    if(fPriority.value) params.set("priority", fPriority.value);
+    if(fOwner.value) params.set("owner", fOwner.value);
+    if(fComponent.value) params.set("component", fComponent.value);
+    const qs = params.toString();
+    return qs ? ("?" + qs) : "";
+  }
+
+  async function refresh(){
+    try{
+      const data = await api("/api/actions" + buildQuery(), { method: "GET", headers: {"Content-Type":"application/json"} });
+      actions = data.items || [];
+      renderTable();
+    }catch(e){
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">Error: ${escapeHtml(e.message)}</td></tr>`;
+    }
+  }
+
+  async function openExisting(id){
+    selectedId = id;
+    const item = actions.find(x => x.id === id);
+    if(!item) return;
+
+    document.getElementById("modalHeading").textContent = "Action";
+    saveBtn.style.display = "none";
+    updateBtn.style.display = "inline-block";
+
+    mActionId.textContent = id;
+    mTitle.value = item.title;
+    mDesc.value = item.description;
+    mOwner.value = item.owner;
+    mComponent.value = item.component;
+    mPriority.value = item.priority;
+    mStatus.value = item.status;
+    mResolution.value = item.resolution_notes || "";
+
+    await refreshEvidence();
+    await refreshAudit();
+    openModal();
+  }
+
+  async function refreshEvidence(){
+    if(!selectedId){
+      evidenceList.textContent = "Create the action first to attach evidence.";
+      return;
+    }
+    try{
+      const data = await api(`/api/actions/${selectedId}/evidence`, { method: "GET", headers: {"Content-Type":"application/json"} });
+      const items = data.items || [];
+      if(!items.length){
+        evidenceList.textContent = "No evidence yet.";
+        return;
+      }
+      evidenceList.innerHTML = items.map(e => `
+        <div style="padding:8px 0; border-bottom:1px solid rgba(147,197,253,.12);">
+          <div><span class="chip">${escapeHtml(e.filename)}</span> <span class="muted mini">(${escapeHtml(e.content_type)})</span></div>
+          <div class="mini muted" style="margin-top:6px;">Key: <span class="chip">${escapeHtml(e.s3_key)}</span></div>
+          <div class="mini muted" style="margin-top:6px;">By <span class="chip">${escapeHtml(e.uploaded_by)}</span> • ${fmt(e.uploaded_at)}</div>
+        </div>
+      `).join("");
+    }catch(e){
+      evidenceList.textContent = "Error loading evidence: " + e.message;
+    }
+  }
+
+  async function refreshAudit(){
+    if(!selectedId){
+      auditList.textContent = "No events yet.";
+      return;
+    }
+    try{
+      const data = await api(`/api/actions/${selectedId}/audit`, { method: "GET", headers: {"Content-Type":"application/json"} });
+      const items = data.items || [];
+      if(!items.length){
+        auditList.textContent = "No events yet.";
+        return;
+      }
+      auditList.innerHTML = items.map(ev => `
+        <div style="padding:8px 0; border-bottom:1px solid rgba(147,197,253,.12);">
+          <div>
+            <span class="chip">${escapeHtml(ev.event_type)}</span>
+            ${ev.to_status ? `<span class="chip">${escapeHtml(ev.from_status || "")} → ${escapeHtml(ev.to_status)}</span>` : ``}
+          </div>
+          <div class="mini muted" style="margin-top:6px;">By <span class="chip">${escapeHtml(ev.actor)}</span> • ${fmt(ev.created_at)}</div>
+          ${ev.notes ? `<div class="mini muted" style="margin-top:6px;">${escapeHtml(ev.notes)}</div>` : ``}
+        </div>
+      `).join("");
+    }catch(e){
+      auditList.textContent = "Error loading audit: " + e.message;
+    }
+  }
+
+  async function createAction(){
+    try{
+      const payload = {
+        title: mTitle.value.trim(),
+        description: mDesc.value.trim(),
+        owner: mOwner.value,
+        component: mComponent.value,
+        priority: mPriority.value
+      };
+      const data = await api("/api/actions", { method: "POST", body: JSON.stringify(payload) });
+      toast("Created action");
+      await refresh();
+      await openExisting(data.id);
+    }catch(e){
+      toast(e.message);
+    }
+  }
+
+  async function updateAction(){
+    if(!selectedId) return;
+    try{
+      const payload = {
+        title: mTitle.value.trim(),
+        description: mDesc.value.trim(),
+        owner: mOwner.value,
+        component: mComponent.value,
+        priority: mPriority.value
+      };
+      await api(`/api/actions/${selectedId}`, { method: "PATCH", body: JSON.stringify(payload) });
+      toast("Updated");
+      await refresh();
+    }catch(e){
+      toast(e.message);
+    }
+  }
+
+  async function applyStatus(){
+    if(!selectedId) { toast("Create an action first"); return; }
+    try{
+      const payload = {
+        to_status: mStatus.value,
+        resolution_notes: mResolution.value.trim()
+      };
+      await api(`/api/actions/${selectedId}/status`, { method: "POST", body: JSON.stringify(payload) });
+      toast("Status updated");
+      await refresh();
+      await refreshAudit();
+    }catch(e){
+      toast(e.message);
+    }
+  }
+
+  async function uploadEvidence(){
+    if(!selectedId) { toast("Create an action first"); return; }
+    const file = document.getElementById("fileInput").files[0];
+    if(!file) { toast("Pick a file first"); return; }
+
+    try{
+      // 1) presign
+      const pres = await api(`/api/actions/${selectedId}/evidence/presign`, {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, content_type: file.type || "application/octet-stream" })
+      });
+
+      // 2) PUT directly to S3 (no custom headers beyond Content-Type)
+      const putRes = await fetch(pres.upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file
+      });
+      if(!putRes.ok){
+        throw new Error("S3 upload failed: HTTP " + putRes.status);
+      }
+
+      // 3) confirm (store metadata)
+      await api(`/api/actions/${selectedId}/evidence/confirm`, {
+        method: "POST",
+        body: JSON.stringify({
+          filename: file.name,
+          s3_key: pres.s3_key,
+          content_type: file.type || "application/octet-stream",
+          size_bytes: file.size
+        })
+      });
+
+      toast("Evidence uploaded");
+      document.getElementById("fileInput").value = "";
+      await refreshEvidence();
+      await refreshAudit();
+      await refresh();
+    }catch(e){
+      toast(e.message);
+    }
+  }
+
+  // ---- UI events
+  document.getElementById("newBtn").addEventListener("click", () => { resetModalForNew(); openModal(); });
+  document.getElementById("closeModal").addEventListener("click", closeModal);
+  document.getElementById("refreshBtn").addEventListener("click", refresh);
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    q.value = ""; fStatus.value=""; fPriority.value=""; fOwner.value=""; fComponent.value="";
+    refresh();
+  });
+
+  [q, fStatus, fPriority, fOwner, fComponent].forEach(el => el.addEventListener("input", () => refresh()));
+
+  saveBtn.addEventListener("click", createAction);
+  updateBtn.addEventListener("click", updateAction);
+  document.getElementById("applyStatusBtn").addEventListener("click", applyStatus);
+  document.getElementById("uploadBtn").addEventListener("click", uploadEvidence);
+
+  // Identity prompt (only if not set)
+  function ensureIdentity(){
+    setBadges();
+    if(!identity.user){
+      const u = prompt("Enter X-User (used for write actions):", "thayu10") || "";
+      const r = (prompt("Enter X-Role (member|lead|admin):", "member") || "member").toLowerCase();
+      identity.user = u.trim();
+      identity.role = (["member","lead","admin"].includes(r) ? r : "member");
+      localStorage.setItem("x_user", identity.user);
+      localStorage.setItem("x_role", identity.role);
+      setBadges();
+      toast("Identity saved for API calls");
+    }
+  }
+
+  // Boot
+  (async function(){
+    ensureIdentity();
+    await loadConfig();
+    await refresh();
+  })();
+</script>
+</body>
+</html>
