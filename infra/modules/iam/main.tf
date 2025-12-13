@@ -25,6 +25,34 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_managed" {
 }
 
 ########################################
+# Allow ECS execution role to read SSM secret
+# (required for task definition "secrets" injection)
+########################################
+
+data "aws_iam_policy_document" "ecs_execution_ssm" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters"
+    ]
+    resources = [
+      var.db_password_ssm_arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "ecs_execution_ssm" {
+  name   = "${var.name}-ecs-execution-ssm"
+  policy = data.aws_iam_policy_document.ecs_execution_ssm.json
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_execution_ssm_attach" {
+  role       = aws_iam_role.ecs_execution.name
+  policy_arn = aws_iam_policy.ecs_execution_ssm.arn
+}
+
+########################################
 # ECS Task Role (application permissions)
 ########################################
 
