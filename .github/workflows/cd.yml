@@ -3,10 +3,11 @@ name: CD - Terraform Apply (dev)
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
     paths:
-      - "infra/**"
       - "app/**"
-      - ".github/workflows/cd.yml"
+      - ".github/workflows/ci.yml"
   workflow_dispatch: {}
 
 permissions:
