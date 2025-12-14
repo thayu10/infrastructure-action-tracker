@@ -87,15 +87,15 @@ Lightweight incident tracking for infrastructure incidents, cloud migrations, op
 
 ### Action Management
 
-**Creating New Actions**
-![Create Action Modal](docs/images/create-action.png)
+**Creating New Actions**  
+![Create Action Modal](docs/images/create-action.png)  
 *Modal-based form for creating infrastructure actions with priority, owner, and component assignment*
 
-**Evidence Upload Integration**
-![Evidence Upload](docs/images/evidence-upload.png)
+**Evidence Upload Integration**  
+![Evidence Upload](docs/images/evidence-upload.png)  
 *S3-backed file attachment system for storing operational evidence and documentation*
-```
 
+---
 
 ## 🏗️ Architecture Overview
 ```
