@@ -1,7 +1,5 @@
 import os
 import re
-import json
-import time
 import uuid
 import base64
 import datetime as dt
@@ -171,10 +169,7 @@ def is_admin(role: str) -> bool:
 
 @app.get("/")
 def index():
-    # Serve the single-page UI from /app/index.html via template string fallback.
-    # If you prefer reading from file, keep it simple for now.
     try:
-        # This assumes index.html is in the same folder and packaged into image.
         with open(os.path.join(os.path.dirname(__file__), "index.html"), "r", encoding="utf-8") as f:
             html = f.read()
     except Exception:
@@ -190,7 +185,6 @@ def index():
 def health():
     ok, missing = require_env()
     if not ok:
-        # Return 200 so ALB doesn't kill the target; show degraded state in payload.
         return jsonify({"status": "degraded", "missing_env": missing}), 200
 
     try:
@@ -225,7 +219,7 @@ def list_actions():
 
     q = "SELECT * FROM actions"
     clauses = []
-    params = {}
+    params: Dict[str, Any] = {}
 
     if status:
         clauses.append("status = %(status)s")
@@ -240,12 +234,12 @@ def list_actions():
         clauses.append("component = %(component)s")
         params["component"] = component
 
+    # Default view: hide Closed unless explicitly filtering by status
+    if not status:
+        clauses.append("status <> 'Closed'")
+
     if clauses:
         q += " WHERE " + " AND ".join(clauses)
-
-    # Default view: Status != Closed sorted by Priority then Updated
-    if not status:
-        q += " WHERE status <> 'Closed'"
 
     q += """
       ORDER BY
@@ -280,12 +274,23 @@ def create_action():
     owner = (body.get("owner") or "").strip()
     component = (body.get("component") or "").strip()
     priority = (body.get("priority") or "").strip()
+    status = (body.get("status") or "Open").strip()
+    resolution_notes = (body.get("resolution_notes") or "").strip() or None
 
     if not title or not description or not owner or not component or not priority:
         return jsonify({"error": "missing required fields"}), 400
 
     if priority not in PRIORITIES:
         return jsonify({"error": "invalid priority", "allowed": PRIORITIES}), 400
+
+    if status not in STATUSES:
+        return jsonify({"error": "invalid status", "allowed": STATUSES}), 400
+
+    if status == "Closed" and not is_lead_or_admin(ident["role"]):
+        return jsonify({"error": "forbidden: only lead/admin can close"}), 403
+
+    if status == "Resolved" and not resolution_notes:
+        return jsonify({"error": "resolution_notes required when resolving"}), 400
 
     action_id = str(uuid.uuid4())
     created_at = now_iso()
@@ -308,11 +313,11 @@ def create_action():
                         "owner": owner,
                         "component": component,
                         "priority": priority,
-                        "status": "Open",
+                        "status": status,
                         "created_by": ident["user"],
                         "created_at": created_at,
                         "updated_at": created_at,
-                        "resolution_notes": None,
+                        "resolution_notes": resolution_notes,
                     },
                 )
         return jsonify({"id": action_id})
@@ -331,24 +336,72 @@ def update_action(action_id: str):
         return jsonify({"error": "database not ready", "detail": derr}), 503
 
     body = request.get_json(force=True, silent=True) or {}
+
+    # Allow full edits
+    title = body.get("title")
+    description = body.get("description")
+    owner = body.get("owner")
+    component = body.get("component")
+    priority = body.get("priority")
     new_status = body.get("status")
     resolution_notes = body.get("resolution_notes")
 
     if new_status and new_status not in STATUSES:
         return jsonify({"error": "invalid status", "allowed": STATUSES}), 400
 
+    if priority and priority not in PRIORITIES:
+        return jsonify({"error": "invalid priority", "allowed": PRIORITIES}), 400
+
     # Only leads/admins can close
     if new_status == "Closed" and not is_lead_or_admin(ident["role"]):
         return jsonify({"error": "forbidden: only lead/admin can close"}), 403
 
-    # Resolved requires notes
-    if new_status == "Resolved" and not (resolution_notes or "").strip():
-        return jsonify({"error": "resolution_notes required when resolving"}), 400
+    # Resolved requires notes (either already stored or provided now)
+    # To be strict and predictable: require notes in this request if setting Resolved.
+    if new_status == "Resolved":
+        rn = (resolution_notes or "").strip()
+        if not rn:
+            return jsonify({"error": "resolution_notes required when resolving"}), 400
 
     updates = []
     params: Dict[str, Any] = {"id": action_id, "updated_at": now_iso()}
 
-    if new_status:
+    if title is not None:
+        t = (title or "").strip()
+        if not t:
+            return jsonify({"error": "title cannot be empty"}), 400
+        updates.append("title = %(title)s")
+        params["title"] = t
+
+    if description is not None:
+        d = (description or "").strip()
+        if not d:
+            return jsonify({"error": "description cannot be empty"}), 400
+        updates.append("description = %(description)s")
+        params["description"] = d
+
+    if owner is not None:
+        o = (owner or "").strip()
+        if not o:
+            return jsonify({"error": "owner cannot be empty"}), 400
+        updates.append("owner = %(owner)s")
+        params["owner"] = o
+
+    if component is not None:
+        c = (component or "").strip()
+        if not c:
+            return jsonify({"error": "component cannot be empty"}), 400
+        updates.append("component = %(component)s")
+        params["component"] = c
+
+    if priority is not None:
+        p = (priority or "").strip()
+        if p not in PRIORITIES:
+            return jsonify({"error": "invalid priority", "allowed": PRIORITIES}), 400
+        updates.append("priority = %(priority)s")
+        params["priority"] = p
+
+    if new_status is not None:
         updates.append("status = %(status)s")
         params["status"] = new_status
 
@@ -372,6 +425,31 @@ def update_action(action_id: str):
                 if cur.rowcount == 0:
                     return jsonify({"error": "not found"}), 404
         return jsonify({"ok": True})
+    finally:
+        con.close()
+
+
+@app.delete("/api/actions/<action_id>")
+def delete_action(action_id: str):
+    ident, err = require_identity()
+    if err:
+        return err
+
+    if not is_admin(ident["role"]):
+        return jsonify({"error": "forbidden: only admin can delete"}), 403
+
+    ready, derr = ensure_db_ready()
+    if not ready:
+        return jsonify({"error": "database not ready", "detail": derr}), 503
+
+    con = db()
+    try:
+        with con:
+            with con.cursor() as cur:
+                cur.execute("DELETE FROM actions WHERE id = %(id)s", {"id": action_id})
+                if cur.rowcount == 0:
+                    return jsonify({"error": "not found"}), 404
+        return jsonify({"ok": True, "deleted": action_id})
     finally:
         con.close()
 
@@ -428,7 +506,6 @@ def upload_evidence(action_id: str):
     except Exception:
         return jsonify({"error": "invalid base64"}), 400
 
-    # Keep uploads reasonably small for demo
     if len(raw) > 5 * 1024 * 1024:
         return jsonify({"error": "file too large (max 5MB)"}), 400
 
@@ -473,5 +550,4 @@ def upload_evidence(action_id: str):
 # ----------------------
 
 if __name__ == "__main__":
-    # Do NOT hard-init DB here; let the app come up even if DB is temporarily unavailable.
     app.run(host="0.0.0.0", port=APP_PORT)

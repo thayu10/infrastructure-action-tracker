@@ -124,6 +124,12 @@
       cursor:pointer;
       margin-right:10px;
       user-select:none;
+      white-space:nowrap;
+      display:inline-block;
+    }
+
+    .danger{
+      color:var(--bad);
     }
 
     .filters{
@@ -229,8 +235,8 @@
     <div>
       <h1>Infrastructure Action Tracker</h1>
       <div class="subtitle">
-        Lightweight operational tracker for infrastructure actions that 
-        captures context, ownership, lifecycle state, and supporting 
+        Lightweight operational tracker for infrastructure actions that
+        captures context, ownership, lifecycle state, and supporting
         evidence stored in S3.
       </div>
       <div class="chips">
@@ -301,6 +307,11 @@
       </div>
 
       <div class="full">
+        <label>Resolution notes (required for Resolved)</label>
+        <textarea id="m-resolution" placeholder="What fixed it, what changed, links, commands, root cause, etc"></textarea>
+      </div>
+
+      <div class="full">
         <div class="sep"></div>
         <label>Evidence</label>
         <div class="evidence-box">
@@ -340,8 +351,6 @@
   let currentActionId=null;
   let editMode=false;
 
-  // You can still override these via headers in curl/postman.
-  // In browser, we keep them stable.
   const X_USER = localStorage.getItem("iat_x_user") || "thayu10";
   const X_ROLE = localStorage.getItem("iat_x_role") || "admin";
   localStorage.setItem("iat_x_user", X_USER);
@@ -375,7 +384,6 @@
   fillSelect("m-component", CONFIG.components);
   fillSelect("m-status", CONFIG.statuses);
 
-  // Defaults
   document.getElementById("m-priority").value="P2";
   document.getElementById("m-owner").value=CONFIG.owners[0];
   document.getElementById("m-component").value=CONFIG.components[0];
@@ -449,11 +457,28 @@
       if(f.owner && i.owner !== f.owner) return false;
       if(f.component && i.component !== f.component) return false;
       if(f.q){
-        const hay = `${i.title || ""} ${i.description || ""}`.toLowerCase();
+        const hay = `${i.title || ""} ${i.description || ""} ${i.resolution_notes || ""}`.toLowerCase();
         if(!hay.includes(f.q)) return false;
       }
       return true;
     });
+  }
+
+  function actionsHtml(i){
+    const statusLinks = CONFIG.statuses.map(s => {
+      const label = s === "Resolved" ? "Resolved" : s;
+      return `<span class="link" data-quick="${i.id}" data-status="${escapeHtml(s)}">${escapeHtml(label)}</span>`;
+    }).join("");
+
+    const del = (X_ROLE === "admin")
+      ? `<span class="link danger" data-delete="${i.id}">Delete</span>`
+      : "";
+
+    return `
+      <span class="link" data-edit="${i.id}">Edit</span>
+      ${statusLinks}
+      ${del}
+    `;
   }
 
   function render(){
@@ -472,24 +497,25 @@
         <td>
           <div style="font-weight:700">${escapeHtml(i.title)}</div>
           <div style="color:var(--muted); margin-top:4px; white-space:pre-wrap">${escapeHtml(i.description||"")}</div>
+          ${i.resolution_notes ? `<div style="color:var(--muted); margin-top:6px; white-space:pre-wrap"><span style="color:var(--text); font-weight:700">Resolution:</span> ${escapeHtml(i.resolution_notes)}</div>` : ""}
         </td>
         <td>${escapeHtml(i.owner)}</td>
         <td>${escapeHtml(i.component)}</td>
         <td>${escapeHtml(fmtDate(i.updated_at || i.created_at))}</td>
-        <td>
-          <span class="link" data-edit="${i.id}">Edit</span>
-          <span class="link" data-quick="${i.id}" data-status="In Progress">In Progress</span>
-          <span class="link" data-quick="${i.id}" data-status="Blocked">Blocked</span>
-          <span class="link" data-quick="${i.id}" data-status="Resolved">Resolve</span>
-        </td>
+        <td>${actionsHtml(i)}</td>
       </tr>
     `).join("");
 
     rows.querySelectorAll("[data-edit]").forEach(el=>{
       el.addEventListener("click", ()=> openEdit(el.dataset.edit));
     });
+
     rows.querySelectorAll("[data-quick]").forEach(el=>{
       el.addEventListener("click", ()=> quickUpdate(el.dataset.quick, el.dataset.status));
+    });
+
+    rows.querySelectorAll("[data-delete]").forEach(el=>{
+      el.addEventListener("click", ()=> deleteAction(el.dataset.delete));
     });
   }
 
@@ -507,11 +533,39 @@
 
   async function quickUpdate(id, status){
     try{
-      await api(`/api/actions/${id}`, { method:"PATCH", body: JSON.stringify({ status }) });
+      const payload = { status };
+
+      if(status === "Resolved"){
+        const notes = prompt("Resolution notes (required):", "");
+        if(!notes || !notes.trim()){
+          toast("Resolve cancelled", "Resolution notes are required.");
+          return;
+        }
+        payload.resolution_notes = notes.trim();
+      }
+
+      await api(`/api/actions/${id}`, { method:"PATCH", body: JSON.stringify(payload) });
       toast("Updated", `${id} → ${status}`);
       await refresh();
     }catch(e){
       toast("Update failed", e.message);
+    }
+  }
+
+  async function deleteAction(id){
+    if(X_ROLE !== "admin"){
+      toast("Forbidden", "Only admin can delete.");
+      return;
+    }
+    const ok = confirm(`Hard delete this action?\n\n${id}\n\nThis cannot be undone.`);
+    if(!ok) return;
+
+    try{
+      await api(`/api/actions/${id}`, { method:"DELETE" });
+      toast("Deleted", id);
+      await refresh();
+    }catch(e){
+      toast("Delete failed", e.message);
     }
   }
 
@@ -532,6 +586,7 @@
     document.getElementById("modal-title").textContent = "New Action";
     document.getElementById("m-title").value = "";
     document.getElementById("m-description").value = "";
+    document.getElementById("m-resolution").value = "";
     document.getElementById("m-priority").value = "P2";
     document.getElementById("m-owner").value = CONFIG.owners[0];
     document.getElementById("m-component").value = CONFIG.components[0];
@@ -560,7 +615,8 @@
       owner: document.getElementById("m-owner").value,
       component: document.getElementById("m-component").value,
       priority: document.getElementById("m-priority").value,
-      status: document.getElementById("m-status").value
+      status: document.getElementById("m-status").value,
+      resolution_notes: document.getElementById("m-resolution").value.trim()
     };
   }
 
@@ -569,6 +625,11 @@
 
     if(!body.title || !body.description || !body.owner || !body.component || !body.priority){
       toast("Missing required fields", "Title, Description, Owner, Component, Priority are required.");
+      return;
+    }
+
+    if(body.status === "Resolved" && !body.resolution_notes){
+      toast("Resolution notes required", "Add resolution notes to mark as Resolved.");
       return;
     }
 
@@ -582,11 +643,9 @@
         toast("Action created", res.id);
       }
 
-      // Prevent duplicates: disable Save after successful create/update
       btnSave.disabled = true;
       btnSave.textContent = "Saved ✓";
 
-      // If we now have an ID, load evidence list
       if(currentActionId){
         await loadEvidence(currentActionId);
       }
@@ -608,6 +667,7 @@
 
     document.getElementById("m-title").value = a.title || "";
     document.getElementById("m-description").value = a.description || "";
+    document.getElementById("m-resolution").value = a.resolution_notes || "";
     document.getElementById("m-owner").value = a.owner || CONFIG.owners[0];
     document.getElementById("m-component").value = a.component || CONFIG.components[0];
     document.getElementById("m-priority").value = a.priority || "P2";
@@ -681,8 +741,6 @@
       toast("Evidence uploaded", file.name);
       input.value = "";
       await loadEvidence(currentActionId);
-
-      // Keep modal open; user clicks Done when finished.
     }catch(e){
       toast("Upload failed", e.message);
     }
@@ -696,7 +754,6 @@
 
   document.getElementById("btn-done").addEventListener("click", closeModal);
 
-  // click outside modal to close
   backdrop.addEventListener("click", (e)=>{
     if(e.target === backdrop) closeModal();
   });
@@ -714,7 +771,6 @@
     render();
   });
 
-  // Live filtering + Enter optional
   ["q","f-status","f-priority","f-owner","f-component"].forEach(id=>{
     const el=document.getElementById(id);
     el.addEventListener("input", render);
