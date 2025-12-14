@@ -174,5 +174,66 @@ Terraform state is stored remotely for team-safe locking and CI/CD runs:
 
 ## Repository structure
 
+modules/
+  vpc        → Networking, subnets, routing, and security boundaries
+  alb        → Application Load Balancer and target groups
+  ecs        → ECS Fargate cluster, task definitions, and services
+  rds        → PostgreSQL database with private access
+  iam        → IAM roles and policies for ECS and CI/CD
+  s3         → Evidence storage bucket with restricted access
+  cloudwatch→ Log groups and basic monitoring
+  bastion   → Optional administrative access host
+
+infra/
+├── main.tf
+├── provider.tf
+├── versions.tf
+├── variables.tf
+├── outputs.tf
+├── dev.tfvars
+├── prod.tfvars
+│
+├── modules/
+│   ├── vpc/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   ├── alb/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   ├── ecs/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   ├── rds/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   ├── iam/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   ├── s3/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   ├── cloudwatch/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   └── bastion/
+│       ├── main.tf
+│       ├── variables.tf
+│       └── outputs.tf
+│
+└── README.md 
 
 
