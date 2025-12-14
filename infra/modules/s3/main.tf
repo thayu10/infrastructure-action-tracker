@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "evidence" {
-  bucket = "${var.name}-evidence"
+  bucket        = "${var.name}-evidence"
   force_destroy = true
 }
 
@@ -32,7 +32,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "evidence" {
 
 # Lifecycle: expire objects after 90 days (keeps storage tidy)
 resource "aws_s3_bucket_lifecycle_configuration" "evidence" {
-  bucket = aws_s3_bucket.evidence.id
+  bucket        = aws_s3_bucket.evidence.id
   force_destroy = true
 
   rule {
@@ -47,5 +47,5 @@ resource "aws_s3_bucket_lifecycle_configuration" "evidence" {
       noncurrent_days = 90
     }
   }
-  
+
 }
