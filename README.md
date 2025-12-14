@@ -107,7 +107,6 @@ Authentication is header-based and designed to sit behind:
 - Auth middleware (future)
 
 ### Required Headers
-```text
 X-User: <username>
 X-Role: member | lead | admin
 
@@ -174,4 +173,6 @@ Terraform state is stored remotely for team-safe locking and CI/CD runs:
 ---
 
 ## Repository structure
+
+
 
