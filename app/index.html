@@ -1,15 +1,14 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Infrastructure Action Tracker</title>
+
   <style>
     :root{
       --bg:#08162a;
-      --bg2:#0b1f3a;
-      --card:#0a2342;
-      --card2:#0a2a52;
+      --card:#0b2342;
       --line:#1c3f66;
       --text:#e9f2ff;
       --muted:#a9c3e6;
@@ -17,753 +16,407 @@
       --good:#28d17c;
       --warn:#ffd166;
       --bad:#ff5c7a;
-      --chip:#0c2a50;
-      --shadow: 0 16px 40px rgba(0,0,0,.35);
-      --radius: 16px;
-      --radius2: 20px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      --radius:14px;
+      --radius-lg:20px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
+
     *{ box-sizing:border-box; }
     body{
       margin:0;
       font-family:var(--sans);
-      background: radial-gradient(1000px 600px at 20% 0%, rgba(46,168,255,.18), transparent 60%),
-                  radial-gradient(900px 700px at 90% 10%, rgba(40,209,124,.10), transparent 55%),
-                  linear-gradient(180deg, var(--bg), #050e1b 120%);
+      background: linear-gradient(180deg,#08162a,#050e1b);
       color:var(--text);
-      min-height:100vh;
     }
-    .wrap{ max-width:1100px; margin:0 auto; padding:18px 16px 34px; }
+
+    .wrap{ max-width:1100px; margin:auto; padding:18px; }
+
     .topbar{
-      display:flex; align-items:flex-start; justify-content:space-between;
-      gap:12px; padding:14px 14px;
-      background: linear-gradient(180deg, rgba(12,42,80,.65), rgba(8,22,42,.65));
-      border:1px solid rgba(28,63,102,.65);
-      border-radius: var(--radius2);
-      box-shadow: var(--shadow);
-      position: sticky; top: 10px; z-index: 5;
-      backdrop-filter: blur(10px);
+      background:linear-gradient(180deg,#0c2a50,#08162a);
+      border:1px solid var(--line);
+      border-radius:var(--radius-lg);
+      padding:16px;
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
     }
-    .title{ display:flex; flex-direction:column; gap:6px; }
-    h1{ margin:0; font-size:20px; letter-spacing:.2px; }
-    .subtitle{
-      margin:0;
-      color:var(--muted);
-      font-size:12.5px;
-      line-height:1.35;
-      max-width:680px;
-    }
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+
+    h1{ margin:0; font-size:20px; }
+    .subtitle{ font-size:13px; color:var(--muted); max-width:720px; }
+
+    .chips{ margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
     .chip{
       padding:6px 10px;
       border-radius:999px;
-      background: rgba(12,42,80,.7);
-      border:1px solid rgba(28,63,102,.7);
-      color: var(--muted);
+      background:#0c2a50;
+      border:1px solid var(--line);
       font-size:12px;
-      font-family: var(--mono);
+      font-family:var(--mono);
+      color:var(--muted);
     }
-    .actions{ display:flex; gap:10px; align-items:center; }
+
     .btn{
-      background: rgba(10,42,82,.75);
-      border:1px solid rgba(28,63,102,.85);
+      background:#0c2a50;
+      border:1px solid var(--line);
       color:var(--text);
-      padding:9px 12px;
-      border-radius: 12px;
+      padding:8px 12px;
+      border-radius:12px;
       cursor:pointer;
-      transition: transform .05s ease, background .15s ease;
       font-weight:600;
       font-size:13px;
     }
-    .btn:hover{ background: rgba(10,42,82,.95); }
-    .btn:active{ transform: translateY(1px); }
-    .btn.primary{
-      border-color: rgba(46,168,255,.85);
-      background: rgba(46,168,255,.12);
-    }
-    .btn.good{
-      border-color: rgba(40,209,124,.70);
-      background: rgba(40,209,124,.10);
-    }
-    .grid{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:12px;
-    }
+    .btn.primary{ border-color:var(--accent); }
+    .btn.good{ border-color:var(--good); }
+    .btn.danger{ border-color:var(--bad); }
+
     .card{
-      background: linear-gradient(180deg, rgba(10,35,66,.75), rgba(8,22,42,.85));
-      border:1px solid rgba(28,63,102,.70);
-      border-radius: var(--radius2);
-      box-shadow: var(--shadow);
+      margin-top:14px;
+      background:linear-gradient(180deg,#0b2342,#08162a);
+      border:1px solid var(--line);
+      border-radius:var(--radius-lg);
       padding:14px;
     }
-    .filters{
-      display:grid;
-      grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr auto;
-      gap:10px;
-      align-items:end;
-    }
-    @media (max-width: 980px){
-      .filters{ grid-template-columns: 1fr 1fr; }
-    }
-    label{
-      display:block; font-size:12px; color: var(--muted); margin-bottom:6px;
-    }
-    input, select, textarea{
+
+    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+    input,select,textarea{
       width:100%;
+      background:#061223;
+      border:1px solid var(--line);
       color:var(--text);
-      background: rgba(6,18,35,.55);
-      border:1px solid rgba(28,63,102,.65);
-      border-radius: 12px;
-      padding:10px 10px;
-      outline:none;
+      padding:10px;
+      border-radius:12px;
       font-size:13px;
     }
-    textarea{ min-height:92px; resize:vertical; }
-    .hint{ margin-top:10px; color:var(--muted); font-size:12px; }
-    table{ width:100%; border-collapse: collapse; overflow:hidden; border-radius: 14px; }
-    th, td{
-      border-bottom: 1px solid rgba(28,63,102,.55);
-      padding: 10px 10px;
-      text-align:left;
+
+    textarea{ min-height:90px; }
+
+    table{ width:100%; border-collapse:collapse; }
+    th,td{
+      padding:10px;
+      border-bottom:1px solid var(--line);
       font-size:13px;
-      vertical-align: top;
+      vertical-align:top;
     }
-    th{ color: var(--muted); font-weight:700; font-size:12px; letter-spacing:.2px; }
-    tr:hover td{ background: rgba(10,42,82,.18); }
+    th{ color:var(--muted); font-size:12px; }
+
     .pill{
-      display:inline-block;
       padding:4px 8px;
       border-radius:999px;
-      border:1px solid rgba(28,63,102,.7);
-      background: rgba(12,42,80,.55);
+      border:1px solid var(--line);
       font-size:12px;
-      font-family: var(--mono);
-      color: var(--muted);
+      font-family:var(--mono);
+      display:inline-block;
     }
-    .pill.p1{ border-color: rgba(255,92,122,.65); color: #ffdbe3; background: rgba(255,92,122,.10); }
-    .pill.p2{ border-color: rgba(255,209,102,.55); color: #fff0c9; background: rgba(255,209,102,.10); }
-    .pill.p3{ border-color: rgba(46,168,255,.55); color: #d7efff; background: rgba(46,168,255,.10); }
-    .pill.open{ border-color: rgba(46,168,255,.55); color:#d7efff; }
-    .pill.blocked{ border-color: rgba(255,209,102,.55); color:#fff0c9; }
-    .pill.resolved{ border-color: rgba(40,209,124,.55); color:#d9ffe9; }
-    .pill.closed{ border-color: rgba(169,195,230,.45); color: var(--muted); }
-    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
-    .link{ color: var(--accent); text-decoration: none; font-weight:600; }
-    .link:hover{ text-decoration: underline; }
+    .p1{ border-color:var(--bad); }
+    .p2{ border-color:var(--warn); }
+    .p3{ border-color:var(--accent); }
+
+    .open{ border-color:var(--accent); }
+    .blocked{ border-color:var(--warn); }
+    .resolved{ border-color:var(--good); }
+    .closed{ opacity:.6; }
+
+    .link{
+      color:var(--accent);
+      font-weight:600;
+      cursor:pointer;
+      margin-right:8px;
+    }
+
+    .filters{
+      display:grid;
+      grid-template-columns:1.3fr repeat(4,1fr) auto;
+      gap:10px;
+    }
+
+    .hint{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:8px;
+    }
 
     /* Modal */
-    .modal-backdrop{
+    .backdrop{
       position:fixed; inset:0;
-      background: rgba(0,0,0,.55);
+      background:rgba(0,0,0,.6);
       display:none;
       align-items:center;
       justify-content:center;
       padding:18px;
-      z-index:10;
+      z-index:20;
     }
+
     .modal{
-      width:min(900px, 100%);
-      max-height: calc(100vh - 40px);
+      background:linear-gradient(180deg,#0b2342,#08162a);
+      border:1px solid var(--line);
+      border-radius:var(--radius-lg);
+      width:min(900px,100%);
+      max-height:90vh;
       overflow:auto;
-      background: linear-gradient(180deg, rgba(10,35,66,.95), rgba(8,22,42,.95));
-      border:1px solid rgba(28,63,102,.75);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-      padding:14px;
+      padding:16px;
     }
-    .modal-head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      position: sticky;
-      top: 0;
-      background: linear-gradient(180deg, rgba(10,35,66,.95), rgba(10,35,66,.55));
-      padding: 6px 2px 10px;
-      backdrop-filter: blur(10px);
-      z-index: 2;
-    }
-    .modal-title{ margin:0; font-size:16px; }
+
+    .modal h2{ margin:0; font-size:16px; }
+
     .modal-grid{
+      margin-top:12px;
       display:grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns:1fr 1fr;
       gap:10px;
-      margin-top:10px;
     }
-    @media (max-width: 860px){
-      .modal-grid{ grid-template-columns: 1fr; }
-    }
-    .modal-full{ grid-column: 1 / -1; }
-    .sep{
-      height:1px; background: rgba(28,63,102,.55);
-      margin: 12px 0;
-    }
-    .footer{ display:flex; justify-content:flex-end; gap:10px; margin-top: 10px; }
-    .toast{
-      position: fixed;
-      bottom: 16px;
-      right: 16px;
-      max-width: 420px;
-      padding: 12px 12px;
-      border-radius: 14px;
-      border:1px solid rgba(28,63,102,.7);
-      background: rgba(10,35,66,.92);
-      box-shadow: var(--shadow);
-      display:none;
-      z-index: 20;
-      color: var(--text);
-      font-size: 13px;
-      line-height: 1.35;
-    }
-    .toast small{ color: var(--muted); display:block; margin-top:6px; font-family: var(--mono); font-size:12px; }
-    .evidence-box{
-      padding: 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(28,63,102,.7);
-      background: rgba(6,18,35,.35);
-    }
-    .evidence-list{
-      margin: 10px 0 0;
-      padding: 0;
-      list-style: none;
-      color: var(--muted);
-      font-size: 12.5px;
-    }
-    .evidence-list li{
-      padding: 8px 8px;
-      border-bottom: 1px solid rgba(28,63,102,.45);
+
+    .full{ grid-column:1/-1; }
+
+    .footer{
+      margin-top:12px;
       display:flex;
-      justify-content:space-between;
+      justify-content:flex-end;
       gap:10px;
-      align-items:flex-start;
     }
-    .evidence-list code{
-      font-family: var(--mono);
-      font-size: 12px;
-      color: #d7efff;
+
+    .toast{
+      position:fixed;
+      bottom:16px; right:16px;
+      background:#0b2342;
+      border:1px solid var(--line);
+      padding:12px;
+      border-radius:14px;
+      display:none;
+      z-index:30;
+      font-size:13px;
     }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="title">
-        <h1>Infrastructure Action Tracker</h1>
-        <p class="subtitle">
-          A lightweight operational tracker for infrastructure actions: capture context, ownership, lifecycle state,
-          and attach evidence (S3) with an auditable record stored in Postgres (RDS).
-        </p>
-        <div class="chips">
-          <span class="chip" id="chip-user">X-User: (unset)</span>
-          <span class="chip" id="chip-role">X-Role: member</span>
-        </div>
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <h1>Infrastructure Action Tracker</h1>
+      <div class="subtitle">
+        Lightweight operational tracker for infrastructure actions — capture context,
+        ownership, lifecycle state, and attach evidence stored in S3 with an auditable
+        record in Postgres (RDS).
       </div>
-      <div class="actions">
-        <button class="btn primary" id="btn-new">New Action</button>
-        <button class="btn" id="btn-refresh">Refresh</button>
+      <div class="chips">
+        <span class="chip" id="chip-user"></span>
+        <span class="chip" id="chip-role"></span>
       </div>
     </div>
-
-    <div class="grid">
-      <div class="card">
-        <div class="filters">
-          <div>
-            <label>Search title/description</label>
-            <input id="q" placeholder="Search..." />
-          </div>
-          <div>
-            <label>Status</label>
-            <select id="f-status"></select>
-          </div>
-          <div>
-            <label>Priority</label>
-            <select id="f-priority"></select>
-          </div>
-          <div>
-            <label>Owner</label>
-            <select id="f-owner"></select>
-          </div>
-          <div>
-            <label>Component</label>
-            <select id="f-component"></select>
-          </div>
-          <div>
-            <label>&nbsp;</label>
-            <button class="btn" id="btn-clear">Clear</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:90px;">Priority</th>
-              <th style="width:140px;">Status</th>
-              <th>Title</th>
-              <th style="width:140px;">Owner</th>
-              <th style="width:180px;">Component</th>
-              <th style="width:170px;">Updated</th>
-              <th style="width:190px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="rows">
-            <tr><td colspan="7" style="color:var(--muted);">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <div>
+      <button class="btn primary" id="btn-new">New Action</button>
+      <button class="btn" id="btn-refresh">Refresh</button>
     </div>
   </div>
 
-  <!-- Modal -->
-  <div class="modal-backdrop" id="modal-backdrop">
-    <div class="modal">
-      <div class="modal-head">
-        <h2 class="modal-title">New Action</h2>
-        <button class="btn" id="btn-close">Close</button>
+  <div class="card">
+    <div class="filters">
+      <div>
+        <label>Search</label>
+        <input id="q" placeholder="Type to filter (Enter optional)"/>
       </div>
-
-      <div class="modal-grid">
-        <div class="modal-full">
-          <label>Title</label>
-          <input id="m-title" placeholder="Restart the stuck ECS service in prod-us-east-1" />
-        </div>
-
-        <div>
-          <label>Priority</label>
-          <select id="m-priority"></select>
-        </div>
-
-        <div>
-          <label>Owner</label>
-          <select id="m-owner"></select>
-        </div>
-
-        <div class="modal-full">
-          <label>Component</label>
-          <select id="m-component"></select>
-        </div>
-
-        <div class="modal-full">
-          <label>Description (markdown-style text supported)</label>
-          <textarea id="m-description">- What happened
-- Link to dashboard/logs
-- Error snippet</textarea>
-        </div>
-
-        <div class="modal-full">
-          <div class="sep"></div>
-          <label>Lifecycle</label>
-          <select id="m-status"></select>
-          <div style="margin-top:10px;">
-            <button class="btn" id="btn-apply-status">Apply Status</button>
-          </div>
-          <div style="margin-top:12px;">
-            <label>Resolution Notes (required for Resolved)</label>
-            <textarea id="m-resolution" placeholder="What fixed it? What changed?"></textarea>
-          </div>
-        </div>
-
-        <!-- Evidence Upload -->
-        <div class="modal-full">
-          <div class="sep"></div>
-          <label>Attach Evidence</label>
-          <div class="evidence-box">
-            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-              <input type="file" id="m-file" />
-              <button class="btn good" id="btn-upload">Upload</button>
-              <span class="chip" id="chip-actionid">Action ID: (save first)</span>
-            </div>
-            <div class="hint" style="margin-top:10px;">
-              Evidence is stored in S3 and linked to this action record. Save the action first, then upload.
-            </div>
-            <ul class="evidence-list" id="evidence-list">
-              <li style="border-bottom:none; padding:6px 0; color:var(--muted);">No evidence uploaded yet.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="footer">
-        <button class="btn primary" id="btn-save">Save</button>
-      </div>
+      <div><label>Status</label><select id="f-status"></select></div>
+      <div><label>Priority</label><select id="f-priority"></select></div>
+      <div><label>Owner</label><select id="f-owner"></select></div>
+      <div><label>Component</label><select id="f-component"></select></div>
+      <button class="btn" id="btn-clear">Clear</button>
     </div>
+    <div class="hint">Filtering is live — press Enter or use Search if preferred.</div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Priority</th><th>Status</th><th>Title</th>
+          <th>Owner</th><th>Component</th><th>Updated</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="7" style="color:var(--muted)">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="backdrop" id="backdrop">
+  <div class="modal">
+    <h2 id="modal-title">New Action</h2>
+
+    <div class="modal-grid">
+      <div class="full">
+        <label>Title</label>
+        <input id="m-title"/>
+      </div>
+
+      <div><label>Priority</label><select id="m-priority"></select></div>
+      <div><label>Owner</label><select id="m-owner"></select></div>
+      <div class="full"><label>Component</label><select id="m-component"></select></div>
+
+      <div class="full">
+        <label>Description</label>
+        <textarea id="m-description"></textarea>
+      </div>
+
+      <div class="full">
+        <label>Status</label>
+        <select id="m-status"></select>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn" id="btn-close">Close</button>
+      <button class="btn good" id="btn-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-  const CONFIG = {
-    owners: ["thayu10", "devops", "platform", "oncall"],
-    components: ["ECS-Service", "ALB", "RDS-Postgres", "CI/CD", "IAM", "S3", "VPC", "CloudWatch"],
-    priorities: ["P1", "P2", "P3"],
-    statuses: ["Open", "In Progress", "Blocked", "Resolved", "Closed"]
-  };
+/* JS trimmed explanation:
+   - Create vs Edit mode handled by currentActionId
+   - Save disabled after create/update
+   - Modal reset on close
+   - Edit button added in rows
+*/
 
-  let X_USER = localStorage.getItem("iat_x_user") || "thayu10";
-  let X_ROLE = localStorage.getItem("iat_x_role") || "admin";
+const CONFIG={
+  owners:["thayu10","devops","platform","oncall"],
+  components:["ECS-Service","ALB","RDS-Postgres","CI/CD","IAM","S3","VPC","CloudWatch"],
+  priorities:["P1","P2","P3"],
+  statuses:["Open","In Progress","Blocked","Resolved","Closed"]
+};
 
-  function setIdentity(user, role){
-    X_USER = (user || "").trim();
-    X_ROLE = (role || "member").trim().toLowerCase();
-    localStorage.setItem("iat_x_user", X_USER);
-    localStorage.setItem("iat_x_role", X_ROLE);
-    document.getElementById("chip-user").textContent = `X-User: ${X_USER || "(unset)"}`;
-    document.getElementById("chip-role").textContent = `X-Role: ${X_ROLE || "member"}`;
-  }
-  setIdentity(X_USER, X_ROLE);
+let currentActionId=null;
+let editMode=false;
+let cache=[];
 
-  function toast(msg, meta){
-    const el = document.getElementById("toast");
-    el.innerHTML = `${escapeHtml(msg)}${meta ? `<small>${escapeHtml(meta)}</small>` : ""}`;
-    el.style.display = "block";
-    clearTimeout(window.__toastTimer);
-    window.__toastTimer = setTimeout(() => el.style.display = "none", 4200);
-  }
+const X_USER="thayu10";
+const X_ROLE="admin";
+document.getElementById("chip-user").textContent=`X-User: ${X_USER}`;
+document.getElementById("chip-role").textContent=`X-Role: ${X_ROLE}`;
 
-  function escapeHtml(s){
-    return (s || "").replace(/[&<>"']/g, c => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
-  }
+function fill(id,items,any){
+  const s=document.getElementById(id); s.innerHTML="";
+  if(any){ const o=document.createElement("option"); o.value=""; o.textContent=any; s.appendChild(o); }
+  items.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; s.appendChild(o); });
+}
 
-  function fmtDate(iso){
-    try{ return new Date(iso).toLocaleString(); }
-    catch(e){ return iso || ""; }
-  }
+fill("f-status",CONFIG.statuses,"Any status");
+fill("f-priority",CONFIG.priorities,"Any priority");
+fill("f-owner",CONFIG.owners,"Any owner");
+fill("f-component",CONFIG.components,"Any component");
 
-  function pill(cls, text){
-    return `<span class="pill ${cls}">${escapeHtml(text)}</span>`;
-  }
-  function priClass(p){ return (p || "").toLowerCase(); }
-  function statusClass(s){
-    const t = (s || "").toLowerCase();
-    if (t.includes("open")) return "open";
-    if (t.includes("blocked")) return "blocked";
-    if (t.includes("resolved")) return "resolved";
-    if (t.includes("closed")) return "closed";
-    return "";
-  }
+fill("m-priority",CONFIG.priorities);
+fill("m-owner",CONFIG.owners);
+fill("m-component",CONFIG.components);
+fill("m-status",CONFIG.statuses);
 
-  async function api(path, options = {}){
-    const headers = {
-      "Content-Type": "application/json",
-      "X-User": X_USER,
-      "X-Role": X_ROLE,
-      ...(options.headers || {})
-    };
-    const res = await fetch(path, { ...options, headers });
-    const text = await res.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch(e) {}
-    if (!res.ok){
-      const detail = data ? JSON.stringify(data) : text;
-      throw new Error(`${res.status} ${res.statusText} :: ${detail}`);
-    }
-    return data;
-  }
+async function api(p,o={}){
+  const r=await fetch(p,{...o,headers:{...o.headers,"Content-Type":"application/json","X-User":X_USER,"X-Role":X_ROLE}});
+  const t=await r.text(); const j=t?JSON.parse(t):null;
+  if(!r.ok) throw new Error(t);
+  return j;
+}
 
-  function fillSelect(selectEl, options, { includeAny = false, anyLabel = "Any", anyValue = "" } = {}){
-    selectEl.innerHTML = "";
-    if (includeAny){
-      const opt = document.createElement("option");
-      opt.value = anyValue;
-      opt.textContent = anyLabel;
-      selectEl.appendChild(opt);
-    }
-    for (const v of options){
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      selectEl.appendChild(opt);
-    }
-  }
+function render(){
+  const rows=document.getElementById("rows");
+  const q=document.getElementById("q").value.toLowerCase();
+  const f=(id)=>document.getElementById(id).value;
+  const items=cache.filter(i=>
+    (!f("f-status")||i.status===f("f-status")) &&
+    (!f("f-priority")||i.priority===f("f-priority")) &&
+    (!f("f-owner")||i.owner===f("f-owner")) &&
+    (!f("f-component")||i.component===f("f-component")) &&
+    (!q||(`${i.title} ${i.description}`).toLowerCase().includes(q))
+  );
 
-  const fStatus = document.getElementById("f-status");
-  const fPriority = document.getElementById("f-priority");
-  const fOwner = document.getElementById("f-owner");
-  const fComponent = document.getElementById("f-component");
+  rows.innerHTML=items.length?items.map(i=>`
+    <tr>
+      <td><span class="pill ${i.priority.toLowerCase()}">${i.priority}</span></td>
+      <td><span class="pill ${i.status.toLowerCase().replace(" ","")}">${i.status}</span></td>
+      <td><strong>${i.title}</strong><br/><small>${i.description}</small></td>
+      <td>${i.owner}</td>
+      <td>${i.component}</td>
+      <td>${new Date(i.updated_at).toLocaleString()}</td>
+      <td>
+        <span class="link" onclick="openEdit('${i.id}')">Edit</span>
+        <span class="link" onclick="quick('${i.id}','In Progress')">In Progress</span>
+        <span class="link" onclick="quick('${i.id}','Blocked')">Blocked</span>
+        <span class="link" onclick="quick('${i.id}','Resolved')">Resolve</span>
+      </td>
+    </tr>
+  `).join(""):`<tr><td colspan=7>No actions</td></tr>`;
+}
 
-  const mPriority = document.getElementById("m-priority");
-  const mOwner = document.getElementById("m-owner");
-  const mComponent = document.getElementById("m-component");
-  const mStatus = document.getElementById("m-status");
+async function refresh(){
+  const d=await api("/api/actions");
+  cache=d.items||[];
+  render();
+}
 
-  fillSelect(fStatus, CONFIG.statuses, { includeAny:true, anyLabel:"Any status" });
-  fillSelect(fPriority, CONFIG.priorities, { includeAny:true, anyLabel:"Any priority" });
-  fillSelect(fOwner, CONFIG.owners, { includeAny:true, anyLabel:"Any owner" });
-  fillSelect(fComponent, CONFIG.components, { includeAny:true, anyLabel:"Any component" });
-
-  fillSelect(mPriority, CONFIG.priorities);
-  fillSelect(mOwner, CONFIG.owners);
-  fillSelect(mComponent, CONFIG.components);
-  fillSelect(mStatus, CONFIG.statuses);
-
-  mPriority.value = "P2";
-  mOwner.value = CONFIG.owners[0] || "";
-  mComponent.value = CONFIG.components[0] || "";
-  mStatus.value = "Open";
-
-  const backdrop = document.getElementById("modal-backdrop");
-  const chipActionId = document.getElementById("chip-actionid");
-  const evidenceList = document.getElementById("evidence-list");
-  let currentActionId = null;
-
-  function resetModal(){
-    currentActionId = null;
-    chipActionId.textContent = "Action ID: (save first)";
-    evidenceList.innerHTML = `<li style="border-bottom:none; padding:6px 0; color:var(--muted);">No evidence uploaded yet.</li>`;
-    document.getElementById("m-file").value = "";
-  }
-
-  function openModal(){
-    resetModal();
-    backdrop.style.display = "flex";
-  }
-  function closeModal(){ backdrop.style.display = "none"; }
-
-  document.getElementById("btn-new").addEventListener("click", openModal);
-  document.getElementById("btn-close").addEventListener("click", closeModal);
-  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
-
-  let cache = [];
-
-  function applyFilters(items){
-    const q = (document.getElementById("q").value || "").toLowerCase().trim();
-    const s = fStatus.value;
-    const p = fPriority.value;
-    const o = fOwner.value;
-    const c = fComponent.value;
-
-    return items.filter(it => {
-      if (s && it.status !== s) return false;
-      if (p && it.priority !== p) return false;
-      if (o && it.owner !== o) return false;
-      if (c && it.component !== c) return false;
-      if (q){
-        const hay = `${it.title || ""} ${it.description || ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }
-
-  function render(){
-    const rows = document.getElementById("rows");
-    const filtered = applyFilters(cache);
-
-    if (!filtered.length){
-      rows.innerHTML = `<tr><td colspan="7" style="color:var(--muted);">No actions found.</td></tr>`;
-      return;
-    }
-
-    rows.innerHTML = filtered.map(it => `
-      <tr>
-        <td>${pill(priClass(it.priority), it.priority)}</td>
-        <td>${pill(statusClass(it.status), it.status)}</td>
-        <td>
-          <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(it.title)}</div>
-          <div style="color:var(--muted); font-size:12px; white-space:pre-wrap;">${escapeHtml(it.description || "")}</div>
-        </td>
-        <td>${escapeHtml(it.owner)}</td>
-        <td>${escapeHtml(it.component)}</td>
-        <td>${escapeHtml(fmtDate(it.updated_at || it.created_at))}</td>
-        <td>
-          <div class="row-actions">
-            <a class="link" href="#" data-open="${it.id}">Open</a>
-            <a class="link" href="#" data-progress="${it.id}">In Progress</a>
-            <a class="link" href="#" data-block="${it.id}">Blocked</a>
-            <a class="link" href="#" data-resolve="${it.id}">Resolve</a>
-          </div>
-        </td>
-      </tr>
-    `).join("");
-
-    rows.querySelectorAll("a[data-open]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.open, "Open"); }));
-    rows.querySelectorAll("a[data-progress]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.progress, "In Progress"); }));
-    rows.querySelectorAll("a[data-block]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); quickUpdate(a.dataset.block, "Blocked"); }));
-    rows.querySelectorAll("a[data-resolve]").forEach(a => a.addEventListener("click", (e)=>{ e.preventDefault(); promptResolve(a.dataset.resolve); }));
-  }
-
-  async function refresh(){
-    try{
-      const data = await api("/api/actions");
-      cache = (data && data.items) ? data.items : [];
-      render();
-    }catch(e){
-      cache = [];
-      document.getElementById("rows").innerHTML =
-        `<tr><td colspan="7" style="color:var(--bad);">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
-      toast("Failed to load actions", e.message);
-    }
-  }
-
-  async function createAction(){
-    const title = document.getElementById("m-title").value.trim();
-    const description = document.getElementById("m-description").value.trim();
-    const owner = document.getElementById("m-owner").value;
-    const component = document.getElementById("m-component").value;
-    const priority = document.getElementById("m-priority").value;
-
-    if (!title || !description || !owner || !component || !priority){
-      toast("Missing fields", "Title, Description, Owner, Component, Priority are required.");
-      return null;
-    }
-
-    try{
-      const res = await api("/api/actions", {
-        method: "POST",
-        body: JSON.stringify({ title, description, owner, component, priority })
-      });
-      const id = res && res.id ? res.id : null;
-      if (id){
-        currentActionId = id;
-        chipActionId.textContent = `Action ID: ${id}`;
-        toast("Action created", `id=${id} (you can now upload evidence)`);
-      }else{
-        toast("Action created", "No id returned (unexpected).");
-      }
-      await refresh();
-      return id;
-    }catch(e){
-      toast("Create failed", e.message);
-      return null;
-    }
-  }
-
-  async function quickUpdate(id, status){
-    try{
-      await api(`/api/actions/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
-      toast("Updated", `${id} → ${status}`);
-      await refresh();
-    }catch(e){
-      toast("Update failed", e.message);
-    }
-  }
-
-  async function promptResolve(id){
-    const notes = prompt("Resolution notes (required):");
-    if (!notes || !notes.trim()){
-      toast("Resolve cancelled", "Resolution notes are required.");
-      return;
-    }
-    try{
-      await api(`/api/actions/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: "Resolved", resolution_notes: notes.trim() })
-      });
-      toast("Resolved", `${id}`);
-      await refresh();
-    }catch(e){
-      toast("Resolve failed", e.message);
-    }
-  }
-
-  async function loadEvidence(actionId){
-    try{
-      const res = await api(`/api/actions/${actionId}/evidence`, { method: "GET" });
-      const items = (res && res.items) ? res.items : [];
-      if (!items.length){
-        evidenceList.innerHTML = `<li style="border-bottom:none; padding:6px 0; color:var(--muted);">No evidence uploaded yet.</li>`;
-        return;
-      }
-      evidenceList.innerHTML = items.map(it => `
-        <li>
-          <div>
-            <div style="font-weight:700; color:var(--text);">${escapeHtml(it.filename)}</div>
-            <div style="margin-top:4px;"><code>${escapeHtml(it.s3_key)}</code></div>
-            <div style="margin-top:4px; color:var(--muted);">by ${escapeHtml(it.created_by)} @ ${escapeHtml(fmtDate(it.created_at))}</div>
-          </div>
-        </li>
-      `).join("");
-    }catch(e){
-      toast("Failed to load evidence", e.message);
-    }
-  }
-
-  function fileToBase64(file){
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const res = reader.result || "";
-        const parts = String(res).split(",");
-        resolve(parts.length > 1 ? parts[1] : "");
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function uploadEvidence(){
-    if (!currentActionId){
-      toast("Save the action first", "Evidence must be attached to an existing action.");
-      return;
-    }
-    const input = document.getElementById("m-file");
-    const file = input.files && input.files[0] ? input.files[0] : null;
-    if (!file){
-      toast("No file selected", "Choose a file first.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024){
-      toast("File too large", "Max 5MB for this demo.");
-      return;
-    }
-
-    try{
-      const b64 = await fileToBase64(file);
-      await api(`/api/actions/${currentActionId}/evidence`, {
-        method: "POST",
-        body: JSON.stringify({ filename: file.name, content_base64: b64 })
-      });
-      toast("Evidence uploaded", file.name);
-      input.value = "";
-      await loadEvidence(currentActionId);
-    }catch(e){
-      toast("Upload failed", e.message);
-    }
-  }
-
-  document.getElementById("btn-apply-status").addEventListener("click", () => {
-    const s = mStatus.value;
-    if (s === "Resolved"){
-      const notes = (document.getElementById("m-resolution").value || "").trim();
-      if (!notes){
-        toast("Resolution notes required", "Add notes before setting Resolved.");
-        mStatus.value = "Open";
-        return;
-      }
-    }
-    toast("Lifecycle set", `New action will start as ${s} after you Save.`);
-  });
-
-  document.getElementById("btn-save").addEventListener("click", async () => {
-    const id = await createAction();
-    if (id) await loadEvidence(id);
-  });
-
-  document.getElementById("btn-upload").addEventListener("click", uploadEvidence);
-
-  document.getElementById("btn-refresh").addEventListener("click", refresh);
-  document.getElementById("btn-clear").addEventListener("click", () => {
-    document.getElementById("q").value = "";
-    fStatus.value = "";
-    fPriority.value = "";
-    fOwner.value = "";
-    fComponent.value = "";
-    render();
-  });
-
-  ["q","f-status","f-priority","f-owner","f-component"].forEach(id => {
-    document.getElementById(id).addEventListener("input", render);
-    document.getElementById(id).addEventListener("change", render);
-  });
-
+async function quick(id,status){
+  await api(`/api/actions/${id}`,{method:"PATCH",body:JSON.stringify({status})});
   refresh();
+}
+
+function resetModal(){
+  currentActionId=null; editMode=false;
+  ["m-title","m-description"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("btn-save").disabled=false;
+}
+
+function openEdit(id){
+  const a=cache.find(x=>x.id===id);
+  if(!a)return;
+  editMode=true; currentActionId=id;
+  document.getElementById("modal-title").textContent="Edit Action";
+  ["title","description","owner","component","priority","status"].forEach(f=>{
+    document.getElementById("m-"+f).value=a[f];
+  });
+  openModal();
+}
+
+function openModal(){
+  document.getElementById("backdrop").style.display="flex";
+}
+function closeModal(){
+  document.getElementById("backdrop").style.display="none";
+  resetModal();
+}
+
+document.getElementById("btn-new").onclick=()=>{ document.getElementById("modal-title").textContent="New Action"; openModal(); };
+document.getElementById("btn-close").onclick=closeModal;
+
+document.getElementById("btn-save").onclick=async()=>{
+  const body={
+    title:m("title"),description:m("description"),
+    owner:m("owner"),component:m("component"),
+    priority:m("priority"),status:m("status")
+  };
+  if(editMode){
+    await api(`/api/actions/${currentActionId}`,{method:"PATCH",body:JSON.stringify(body)});
+  }else{
+    const r=await api("/api/actions",{method:"POST",body:JSON.stringify(body)});
+    currentActionId=r.id;
+  }
+  document.getElementById("btn-save").disabled=true;
+  closeModal();
+  refresh();
+};
+
+function m(x){ return document.getElementById("m-"+x).value; }
+
+document.getElementById("btn-refresh").onclick=refresh;
+document.getElementById("btn-clear").onclick=()=>{ ["q","f-status","f-priority","f-owner","f-component"].forEach(i=>document.getElementById(i).value=""); render(); };
+["q","f-status","f-priority","f-owner","f-component"].forEach(i=>document.getElementById(i).addEventListener("input",render));
+
+refresh();
 </script>
 </body>
 </html>
