@@ -79,6 +79,24 @@ Lightweight incident tracking for infrastructure incidents, cloud migrations, op
 
 ---
 
+## 📸 Application Interface
+
+### Main Dashboard
+![Action Tracker Dashboard](docs/images/dashboard.png)
+*Searchable action item list with real-time filtering, priority-based sorting, and quick status updates*
+
+### Action Management
+
+**Creating New Actions**
+![Create Action Modal](docs/images/create-action.png)
+*Modal-based form for creating infrastructure actions with priority, owner, and component assignment*
+
+**Evidence Upload Integration**
+![Evidence Upload](docs/images/evidence-upload.png)
+*S3-backed file attachment system for storing operational evidence and documentation*
+```
+
+
 ## 🏗️ Architecture Overview
 ```
 GitHub Actions (OIDC)
