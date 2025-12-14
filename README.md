@@ -172,8 +172,10 @@ Terraform state is stored remotely for team-safe locking and CI/CD runs:
 
 ---
 
-## Repository structure
 
+## Module Overview
+
+```
 modules/
   vpc        → Networking, subnets, routing, and security boundaries
   alb        → Application Load Balancer and target groups
@@ -181,9 +183,13 @@ modules/
   rds        → PostgreSQL database with private access
   iam        → IAM roles and policies for ECS and CI/CD
   s3         → Evidence storage bucket with restricted access
-  cloudwatch→ Log groups and basic monitoring
-  bastion   → Optional administrative access host
+  cloudwatch → Log groups and basic monitoring
+  bastion    → Optional administrative access host
+```
 
+## Directory Structure
+
+```
 infra/
 ├── main.tf
 ├── provider.tf
@@ -234,6 +240,7 @@ infra/
 │       ├── variables.tf
 │       └── outputs.tf
 │
-└── README.md 
+└── README.md
+```
 
 
