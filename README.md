@@ -1,40 +1,115 @@
-# Infrastructure Action Tracker (AWS + Terraform + GitHub Actions)
+# 🛠️ Infrastructure Action Tracker
+## Engineering Runbook
 
-A small, production-minded internal web app for tracking infrastructure actions and operational follow-ups (think: “restart stuck ECS service”, “rotate a DB parameter group”, “investigate ALB 5xx spike”) with audit-friendly metadata and evidence attachments.
+A lightweight internal infrastructure action and incident tracking application designed for cloud and DevOps teams.
 
-The project demonstrates end-to-end delivery of a containerized web application on AWS using Terraform and GitHub Actions, with an emphasis on secure CI/CD, immutable deployments, private networking, and auditable infrastructure operations.
+This system enables teams to:
+- Log operational issues
+- Track lifecycle status
+- Capture resolution context
+- Store supporting evidence securely in Amazon S3
+
+The application is intentionally lightweight and is not intended to replace full ITSM platforms.
+
+Built with Flask on the backend and a single-page HTML + JavaScript UI on the frontend.
+
+---
+
+## 1. System Overview
+
+### Purpose
+Infrastructure Action Tracker is designed for operational visibility and accountability during:
+- Infrastructure incidents
+- Cloud migration work
+- Operational follow-ups
+- Audit and compliance evidence collection
+- DevOps task coordination
+
+The tool focuses on **clarity, traceability, and low operational overhead**.
 
 ---
 
-## What the app does
+## 2. Feature Set
 
-### Core workflow
-1. An engineer creates a new **Action** with mandatory context:
-   - Title (imperative and specific)
-   - Description (supports markdown-style text)
-   - Owner (required)
-   - System/Component (required)
-   - Priority (P1/P2/P3)
-   - External references (optional: links, ticket IDs)
-
-2. Actions move through a clear lifecycle:
-   - **Open → In Progress → Blocked → Resolved → Closed**
-   - **Resolved** requires resolution notes (“what fixed it?”)
-   - **Closed** is restricted to lead/admin (auth-lite)
-
-3. Evidence can be attached:
-   - UI requests a **presigned S3 upload URL**
-   - File is uploaded directly to S3
-   - App stores evidence metadata in the database
-
-### “Auth-lite” (deliberately simple)
-For demo purposes, the app reads identity from request headers:
-- `X-User`: required (who is acting)
-- `X-Role`: optional (`member` | `lead` | `admin`)
-
-This approach supports attribution and basic authorization while keeping the project focused on infrastructure, CI/CD, and deployment concerns.
+### Core Capabilities
+- 📋 Create, edit, resolve, close, and delete infrastructure actions
+- 🏷️ Track actions by priority, status, owner, and component
+- 🔄 Full lifecycle management  
+  Open → In Progress → Blocked → Resolved → Closed
+- 🧠 Mandatory resolution notes when resolving actions
+- 🧾 Attach operational evidence files stored securely in Amazon S3
+- 🔍 Real-time filtering and full-text search across actions and resolutions
+- ⚡ One-click quick status updates directly from the action list
+- 🔐 Role-based behavior enforced via headers (member, lead, admin)
+- 🗑️ Hard delete functionality (admin only)
+- 📊 Priority-based sorting with latest updates surfaced first
+- 🩺 Health endpoint compatible with ALB target groups
 
 ---
+
+## 3. Technology Stack
+
+### Frontend
+- Vanilla HTML
+- Custom CSS dark UI theme
+- JavaScript (no framework)
+- Single-page, modal-based UI
+
+### Backend
+- Python
+- Flask
+- psycopg2
+- boto3 (AWS SDK)
+
+### Data and Storage
+- PostgreSQL  
+  Stores:
+  - Actions
+  - Status transitions
+  - Resolution notes
+  - Evidence metadata
+- Amazon S3  
+  Stores:
+  - Evidence files only
+  - Server-side encryption enabled (AES256)
+
+### Cloud and DevOps
+- Container-ready (ECS / EC2 compatible)
+- ALB-friendly health checks
+- Environment-variable driven configuration
+
+---
+
+## 4. Application Lifecycle
+
+### Supported Action Statuses
+- Open
+- In Progress
+- Blocked
+- Resolved
+- Closed
+
+### Backend-Enforced Rules
+- Resolving an action requires resolution notes
+- Closing an action requires role lead or admin
+- Deleting an action requires role admin
+- Closed actions are hidden by default unless explicitly filtered
+
+---
+
+## 5. Identity and Access Control
+
+### Identity Model
+Authentication is header-based and designed to sit behind:
+- ALB
+- API Gateway
+- Internal reverse proxy
+- Auth middleware (future)
+
+### Required Headers
+```text
+X-User: <username>
+X-Role: member | lead | admin
 
 ## Infrastructure breakdown (AWS)
 
