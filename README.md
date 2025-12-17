@@ -1,4 +1,4 @@
-# 🛠️ Infrastructure Action Tracker
+# 🛠️ Infrastructure Incident Management Tracking 
 **Cloud-Native DevOps Incident Management System**
 
 > **Tech Stack:** AWS ECS Fargate • Terraform IaC • Docker • PostgreSQL RDS • S3 • ALB • GitHub Actions CI/CD • Python Flask
