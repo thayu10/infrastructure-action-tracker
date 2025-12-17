@@ -72,10 +72,10 @@ Lightweight incident tracking for infrastructure incidents, cloud migrations, op
 - Audit trail with status transitions and resolution notes
 
 ### Technical Implementation
-- **Backend:** Python Flask with psycopg2 (PostgreSQL) and boto3 (AWS SDK)
-- **Frontend:** Vanilla JavaScript SPA with modal-based UI
-- **Configuration:** Environment-variable driven, 12-factor app compliant
-- **Containerization:** Docker with ECS/EC2 compatibility
+- **Backend:** Python Flask application using PostgreSQL and AWS services
+- **Frontend:** Simple JavaScript-based web interface
+- **Configuration:** Environment-based configuration
+- **Containerization:** Dockerized application deployed on AWS ECS
 
 ---
 

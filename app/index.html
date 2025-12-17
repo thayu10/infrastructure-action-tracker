@@ -421,7 +421,7 @@
   }
 
   function fmtDate(iso){
-    try { return new Date(iso).toLocaleString(); }
+    try { new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Singapore" })  ; }
     catch(e){ return iso || ""; }
   }
 
