@@ -9,73 +9,61 @@ Incident tracking application for cloud and DevOps teams to log operational issu
 
 ## 🚀 Cloud Architecture
 
-### AWS Services & Infrastructure
-- **Compute:** ECS Fargate with auto-scaling container orchestration
-- **Networking:** Multi-AZ VPC with public/private subnets, NAT Gateway, Internet Gateway
-- **Load Balancing:** Application Load Balancer with health checks and target groups
-- **Database:** RDS PostgreSQL with automated backups and private subnet isolation
-- **Storage:** S3 with server-side encryption (AES256) and lifecycle policies
-- **Security:** IAM roles, security groups, least-privilege access policies
-- **Monitoring:** CloudWatch Logs and metrics integration
+### AWS Infrastructure
+- **Compute:** ECS Fargate with auto-scaling orchestration
+- **Networking:** Multi-AZ VPC with public/private subnets, NAT/Internet Gateways
+- **Load Balancing:** ALB with health checks and target groups
+- **Database:** RDS PostgreSQL with automated backups in private subnets
+- **Storage:** S3 with AES256 encryption and lifecycle policies
+- **Security:** IAM roles, security groups, OIDC authentication (no static credentials)
+- **Monitoring:** CloudWatch Logs and metrics
 
-### Infrastructure as Code (Terraform)
+### Infrastructure as Code
+**Modularized Terraform with Remote Backend:**
+- S3 bucket for state storage
+- DynamoDB table for state locking
+- Enables team collaboration and prevents concurrent modifications
 ```
-Modularized Terraform architecture:
 ├── VPC & Networking (subnets, routing, security groups)
-├── ALB (load balancer, listeners, target groups)
+├── ALB (listeners, target groups)
 ├── ECS (Fargate cluster, task definitions, services)
 ├── RDS (PostgreSQL with private access)
-├── IAM (execution roles, task roles, OIDC for GitHub)
+├── IAM (execution/task roles, OIDC for GitHub)
 ├── S3 (encrypted evidence storage)
 ├── CloudWatch (logging and monitoring)
 └── Bastion (optional admin access)
 ```
 
-**State Management:** Remote backend with S3 + DynamoDB locking for team collaboration
-
 ---
 
-## 🔄 CI/CD Pipeline (GitHub Actions → Docker Hub → AWS)
+## 🔄 CI/CD Pipeline
 
-### Automated Deployment Flow
-1. **Build:** GitHub Actions builds Docker image on push
-2. **Push:** Immutable image tags (`sha-<commit>`) to Docker Hub
-3. **Deploy:** Terraform updates ECS task definition with new image
-4. **Rollout:** ECS service performs rolling deployment with zero downtime
+### Deployment Flow
+**GitHub Actions → Docker Hub → AWS ECS**
 
-### Infrastructure Lifecycle Management
-- **Automated Provisioning:** Complete infrastructure deployment via CI/CD
-- **Manual Teardown Workflows:** 
-  - Full infrastructure destruction (all AWS resources)
-  - Backend infrastructure cleanup (Terraform state bucket and DynamoDB table)
-- **Cost Control:** On-demand environment teardown for dev/test environments
+1. Build Docker image with immutable SHA-based tags (`sha-<commit>`)
+2. Push to Docker Hub
+3. Terraform updates ECS task definition
+4. ECS performs zero-downtime rolling deployment
 
-### Security Implementation
-- **OIDC Authentication:** GitHub Actions assumes AWS roles (no static credentials)
-- **Image Immutability:** SHA-based tagging prevents deployment confusion
-- **Network Isolation:** ECS tasks in private subnets, RDS accessible only from ECS
-- **Encryption:** S3 server-side encryption, RDS encryption at rest
+### Infrastructure Management
+- **Automated Provisioning:** Complete infrastructure via CI/CD
+- **Manual Teardown Workflows:** Full resource destruction and backend cleanup for cost control
+- **Security:** Network isolation (ECS in private subnets), encryption at rest/in transit
 
 ---
 
 ## 💼 Application Features
 
 ### Purpose
-Lightweight incident tracking for infrastructure incidents, cloud migrations, operational follow-ups, and audit evidence collection.
+Lightweight tracking for infrastructure incidents, cloud migrations, operational follow-ups, and audit evidence.
 
 ### Core Capabilities
 - Full lifecycle management (Open → In Progress → Blocked → Resolved → Closed)
-- Role-based access control (member/lead/admin via headers)
-- S3-backed evidence file attachments
+- Role-based access control (member/lead/admin)
+- S3-backed evidence attachments
 - Real-time filtering and search
-- ALB-compatible health endpoints
-- Audit trail with status transitions and resolution notes
-
-### Technical Implementation
-- **Backend:** Python Flask application using PostgreSQL and AWS services
-- **Frontend:** Simple JavaScript-based web interface
-- **Configuration:** Environment-based configuration
-- **Containerization:** Dockerized application deployed on AWS ECS
+- Audit trail with status transitions
 
 ---
 
@@ -97,7 +85,13 @@ Lightweight incident tracking for infrastructure incidents, cloud migrations, op
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture Flow
+
+### Infrastructure Diagram
+![Infrastructure Diagram](docs/images/infrastructure_diagram.png)
+*Complete AWS infrastructure showing VPC, ECS Fargate, RDS, ALB, and S3 integration*
+
+### Deployment Flow
 ```
 GitHub Actions (OIDC)
     ↓
@@ -125,23 +119,10 @@ Terraform Apply
 
 ---
 
-## 📊 Technical Capabilities
+## 🎯 Key Capabilities
 
-✅ **Infrastructure as Code** - Modular Terraform with remote state management  
-✅ **Container Orchestration** - ECS Fargate with task definitions and services  
-✅ **CI/CD Automation** - End-to-end GitHub Actions pipeline  
-✅ **Cloud Architecture** - Multi-tier AWS design with security best practices  
-✅ **Database Management** - RDS PostgreSQL with backup and recovery  
-✅ **Security Engineering** - IAM policies, OIDC, network segmentation  
-✅ **Monitoring & Logging** - CloudWatch integration for observability  
-✅ **Version Control** - Git-based workflow with immutable artifact tagging
-
----
-
-## 🎯 Key Features
-
-**Deployment:** Fully automated with Terraform  
-**Scalability:** Horizontal scaling ready with multi-region support  
-**Security:** Network isolation, encryption at rest and in transit, IAM best practices  
-**Reliability:** Multi-AZ deployment, automated backups, health monitoring  
-**Cost Management:** Manual workflow triggers for complete infrastructure teardown
+✅ **Fully Automated Deployment** - End-to-end Terraform and GitHub Actions pipeline  
+✅ **Production-Ready Security** - OIDC authentication, network segmentation, encryption everywhere  
+✅ **Enterprise Scalability** - Multi-AZ deployment with horizontal scaling support  
+✅ **Cost Optimized** - On-demand infrastructure teardown for non-production environments  
+✅ **Operational Excellence** - CloudWatch monitoring, automated backups, immutable deployments
