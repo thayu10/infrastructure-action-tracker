@@ -4,9 +4,11 @@ locals {
 
 # Generate a strong DB password in Terraform (not hardcoded)
 resource "random_password" "db_password" {
-  length  = 24
-  special = true
+  length           = 16
+  special          = true
+  override_special = "!#$%^&*()-_=+[]{}:;,.?"
 }
+
 
 # Store DB password in SSM Parameter Store (SecureString)
 # ECS will read it as a secret at runtime
