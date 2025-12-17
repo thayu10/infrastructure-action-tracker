@@ -15,6 +15,7 @@ permissions:
 env:
   TF_IN_AUTOMATION: "true"
   AWS_REGION: "ap-southeast-1"
+  AWS_DEFAULT_REGION: "ap-southeast-1"
   AWS_ROLE_ARN: "arn:aws:iam::516646497975:role/github-actions-infrastructure-action-tracker"
   IMAGE_REPO: "thayu10/infrastructure-action-tracker"
 
@@ -47,12 +48,24 @@ jobs:
 
       - name: Terraform init
         working-directory: infra
-        run: terraform init -reconfigure
+        run: |
+          terraform init -reconfigure \
+            -backend-config="region=ap-southeast-1"
 
       - name: Terraform destroy (dev)
         working-directory: infra
         run: |
-          # docker_image is required by variables.tf even though destroy doesn't care about the value
           terraform destroy -auto-approve \
             -var-file="env/dev.tfvars" \
             -var="docker_image=${IMAGE_REPO}:destroy-placeholder"
+
+      # 🔐 SAFETY NET — THIS IS THE IMPORTANT PART
+      - name: Preserve Terraform state on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-state-safety-net
+          path: |
+            infra/*.tfstate*
+            infra/.terraform.tfstate.lock.info
+          if-no-files-found: ignore

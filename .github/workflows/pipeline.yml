@@ -3,6 +3,10 @@ name: Pipeline - Build Image + Terraform Apply (dev)
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - "app/**"
+      - "infra/**"
+      - ".github/workflows/pipeline.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -12,6 +16,7 @@ permissions:
 env:
   TF_IN_AUTOMATION: "true"
   AWS_REGION: "ap-southeast-1"
+  AWS_DEFAULT_REGION: "ap-southeast-1"
   AWS_ROLE_ARN: "arn:aws:iam::516646497975:role/github-actions-infrastructure-action-tracker"
   IMAGE_REPO: "thayu10/infrastructure-action-tracker"
 
@@ -83,7 +88,9 @@ jobs:
 
       - name: Terraform init
         working-directory: infra
-        run: terraform init -reconfigure
+        run: |
+          terraform init -reconfigure \
+            -backend-config="region=ap-southeast-1"
 
       - name: Terraform validate
         working-directory: infra
