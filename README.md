@@ -88,7 +88,7 @@ Lightweight tracking for infrastructure incidents, cloud migrations, operational
 ## 🏗️ Architecture Flow
 
 ### Infrastructure Diagram
-![Infrastructure Diagram](docs/images/infrastructure_ diagram.png)
+![Infrastructure Diagram](docs/images/infrastructure_diagram.png)
 *Complete AWS infrastructure showing VPC, ECS Fargate, RDS, ALB, and S3 integration*
 
 ### Deployment Flow
