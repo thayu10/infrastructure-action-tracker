@@ -107,3 +107,5 @@ module "ec2_bastion" {
   key_name         = var.bastion_key_name
   my_ip_cidr       = var.my_ip_cidr
 }
+
+#test
