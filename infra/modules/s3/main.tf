@@ -38,6 +38,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "evidence" {
     id     = "expire-evidence"
     status = "Enabled"
 
+    filter {
+      prefix = ""
+    }
+
     expiration {
       days = 90
     }
@@ -46,7 +50,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "evidence" {
       noncurrent_days = 90
     }
   }
-
 }
 
 #Extra line
