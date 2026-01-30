@@ -12,3 +12,5 @@ output "rds_endpoint" {
   description = "RDS endpoint (host:port) for the database"
   value       = module.rds.db_endpoint
 }
+
+#test
