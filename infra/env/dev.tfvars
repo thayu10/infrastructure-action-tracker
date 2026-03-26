@@ -25,5 +25,3 @@ components = ["CI-Pipeline", "ECS-Service", "RDS-Postgres", "ALB", "VPC"]
 # bastion_key_name = "your-existing-ec2-keypair-name"
 # my_ip_cidr       = "x.x.x.x/32"
 
-#To simulate change
-#Extra line
